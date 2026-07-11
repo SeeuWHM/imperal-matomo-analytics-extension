@@ -83,7 +83,7 @@ def _top(items: list[dict]) -> tuple[str, float]:
                action_type="read", event="analytics.action.result", data_model=AIReferrersResponse)
 async def fn_ai_referrers(ctx, params: _AIReferrersParams) -> ActionResult:
     """Handler: fn_ai_referrers."""
-    data = await call_mos(ctx, "/api/analytics/ai-referrers", {
+    data = await call_mos(ctx, "/api/matomo-analytics/ai-referrers", {
         "period": params.period, "date": params.date,
     })
     if "error" in data:
@@ -126,7 +126,7 @@ async def fn_ai_referrers(ctx, params: _AIReferrersParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=ConversionsResponse)
 async def fn_conversions(ctx, params: _ConversionsParams) -> ActionResult:
     """Handler: fn_conversions."""
-    data = await call_mos(ctx, "/api/analytics/conversions", {
+    data = await call_mos(ctx, "/api/matomo-analytics/conversions", {
         "period": params.period, "date": params.date,
     })
     if "error" in data:
@@ -183,7 +183,7 @@ async def fn_conversions(ctx, params: _ConversionsParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=EventsResponse)
 async def fn_events(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_events."""
-    data = await call_mos(ctx, "/api/analytics/events", {
+    data = await call_mos(ctx, "/api/matomo-analytics/events", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -229,7 +229,7 @@ async def fn_events(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=UTMSourcesResponse)
 async def fn_utm_sources(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_utm_sources."""
-    data = await call_mos(ctx, "/api/analytics/utm-sources", {
+    data = await call_mos(ctx, "/api/matomo-analytics/utm-sources", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -274,7 +274,7 @@ async def fn_utm_sources(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_regions(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_regions."""
-    data = await call_mos(ctx, "/api/analytics/regions", {
+    data = await call_mos(ctx, "/api/matomo-analytics/regions", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -296,7 +296,7 @@ async def fn_regions(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_device_brands(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_device_brands."""
-    data = await call_mos(ctx, "/api/analytics/brands", {
+    data = await call_mos(ctx, "/api/matomo-analytics/brands", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -321,7 +321,7 @@ async def fn_device_brands(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_browsers(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_browsers."""
-    data = await call_mos(ctx, "/api/analytics/browsers", {
+    data = await call_mos(ctx, "/api/matomo-analytics/browsers", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -347,7 +347,7 @@ async def fn_browsers(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_search_engines(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_search_engines."""
-    data = await call_mos(ctx, "/api/analytics/search-engines", {
+    data = await call_mos(ctx, "/api/matomo-analytics/search-engines", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -369,7 +369,7 @@ async def fn_search_engines(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_organic_keywords(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_organic_keywords."""
-    data = await call_mos(ctx, "/api/analytics/keywords", {
+    data = await call_mos(ctx, "/api/matomo-analytics/keywords", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -391,7 +391,7 @@ async def fn_organic_keywords(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_campaigns(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_campaigns."""
-    data = await call_mos(ctx, "/api/analytics/campaigns", {
+    data = await call_mos(ctx, "/api/matomo-analytics/campaigns", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -413,7 +413,7 @@ async def fn_campaigns(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_social_networks(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_social_networks."""
-    data = await call_mos(ctx, "/api/analytics/socials", {
+    data = await call_mos(ctx, "/api/matomo-analytics/socials", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -435,7 +435,7 @@ async def fn_social_networks(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_referring_sites(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_referring_sites."""
-    data = await call_mos(ctx, "/api/analytics/referring-sites", {
+    data = await call_mos(ctx, "/api/matomo-analytics/referring-sites", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -457,7 +457,7 @@ async def fn_referring_sites(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_site_search(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_site_search."""
-    data = await call_mos(ctx, "/api/analytics/site-search", {
+    data = await call_mos(ctx, "/api/matomo-analytics/site-search", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -485,7 +485,7 @@ async def fn_site_search(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_new_vs_returning(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_new_vs_returning."""
-    data = await call_mos(ctx, "/api/analytics/new-returning", {
+    data = await call_mos(ctx, "/api/matomo-analytics/new-returning", {
         "period": params.period, "date": params.date,
     })
     if "error" in data:
@@ -512,7 +512,7 @@ async def fn_new_vs_returning(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_visit_duration(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_visit_duration."""
-    data = await call_mos(ctx, "/api/analytics/visit-duration", {
+    data = await call_mos(ctx, "/api/matomo-analytics/visit-duration", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -534,7 +534,7 @@ async def fn_visit_duration(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_languages(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_languages."""
-    data = await call_mos(ctx, "/api/analytics/languages", {
+    data = await call_mos(ctx, "/api/matomo-analytics/languages", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -556,7 +556,7 @@ async def fn_languages(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_providers(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_providers."""
-    data = await call_mos(ctx, "/api/analytics/providers", {
+    data = await call_mos(ctx, "/api/matomo-analytics/providers", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -580,7 +580,7 @@ async def fn_providers(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_screen_resolutions(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_screen_resolutions."""
-    data = await call_mos(ctx, "/api/analytics/resolutions", {
+    data = await call_mos(ctx, "/api/matomo-analytics/resolutions", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -602,7 +602,7 @@ async def fn_screen_resolutions(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_page_details(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_page_details."""
-    data = await call_mos(ctx, "/api/analytics/page-details", {
+    data = await call_mos(ctx, "/api/matomo-analytics/page-details", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -642,7 +642,7 @@ async def fn_page_details(ctx, params: _AudienceParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_outlinks(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_outlinks."""
-    data = await call_mos(ctx, "/api/analytics/outlinks", {
+    data = await call_mos(ctx, "/api/matomo-analytics/outlinks", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -666,7 +666,7 @@ async def fn_outlinks(ctx, params: _AudienceParams) -> ActionResult:
 async def fn_full_report(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_full_report."""
     await ctx.progress(10, "Fetching all analytics data from Matomo...")
-    data = await call_mos(ctx, "/api/analytics/full-report", {
+    data = await call_mos(ctx, "/api/matomo-analytics/full-report", {
         "period": params.period, "date": params.date, "limit": params.limit,
     }, timeout=HEAVY_TIMEOUT)
     if "error" in data:
@@ -734,7 +734,7 @@ async def fn_full_report(ctx, params: _AudienceParams) -> ActionResult:
 async def ipc_full_report(ctx, period: str = "week", date: str = "today",
                           limit: int = 20) -> ActionResult:
     """Handler: ipc_full_report."""
-    data = await call_mos(ctx, "/api/analytics/full-report", {
+    data = await call_mos(ctx, "/api/matomo-analytics/full-report", {
         "period": period, "date": date, "limit": limit,
     })
     if "error" in data:

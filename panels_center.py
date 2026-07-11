@@ -49,13 +49,13 @@ async def hub_panel(ctx, view: str = "", **_kw):
     # the visual dashboard. Ask Webbee "что нужно сделать?" to get insights on demand.
     # traffic_summary (period=month) gives bounce_rate + avg_time alongside the series.
     traffic_summary, traffic, trends, top, sources, devices, rt = await asyncio.gather(
-        call_mos(ctx, "/api/analytics/traffic", {"period": "month", "date": "today"}),
-        call_mos(ctx, "/api/analytics/traffic", {"period": "day", "date": "last30"}),
-        call_mos(ctx, "/api/analytics/trends", {}),
-        call_mos(ctx, "/api/analytics/top-pages", {"period": "month", "date": "today", "limit": 10}),
-        call_mos(ctx, "/api/analytics/sources", {"period": "month", "date": "today"}),
-        call_mos(ctx, "/api/analytics/devices", {"period": "month", "date": "today"}),
-        call_mos(ctx, "/api/analytics/real-time", {}),
+        call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "month", "date": "today"}),
+        call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last30"}),
+        call_mos(ctx, "/api/matomo-analytics/trends", {}),
+        call_mos(ctx, "/api/matomo-analytics/top-pages", {"period": "month", "date": "today", "limit": 10}),
+        call_mos(ctx, "/api/matomo-analytics/sources", {"period": "month", "date": "today"}),
+        call_mos(ctx, "/api/matomo-analytics/devices", {"period": "month", "date": "today"}),
+        call_mos(ctx, "/api/matomo-analytics/real-time", {}),
         return_exceptions=True,
     )
 

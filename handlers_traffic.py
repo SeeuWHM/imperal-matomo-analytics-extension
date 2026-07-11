@@ -28,7 +28,7 @@ def _err(data: dict) -> ActionResult:
 )
 async def fn_traffic(ctx, params: TrafficParams) -> ActionResult:
     """Return visits/pageviews summary from Matomo for the requested period."""
-    data = await call_mos(ctx, "/api/analytics/traffic", {
+    data = await call_mos(ctx, "/api/matomo-analytics/traffic", {
         "period": params.period, "date": params.date,
     })
     if "error" in data:
@@ -51,7 +51,7 @@ async def fn_traffic(ctx, params: TrafficParams) -> ActionResult:
 )
 async def fn_top_pages(ctx, params: TopPagesParams) -> ActionResult:
     """Return the N most visited pages for the chosen period and segment."""
-    data = await call_mos(ctx, "/api/analytics/top-pages", {
+    data = await call_mos(ctx, "/api/matomo-analytics/top-pages", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -89,7 +89,7 @@ async def fn_top_pages(ctx, params: TopPagesParams) -> ActionResult:
 )
 async def fn_trends(ctx, params: TrendsParams) -> ActionResult:
     """Return week-over-week visits and the % change, plus up/down direction."""
-    data = await call_mos(ctx, "/api/analytics/trends", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/trends", {})
     if "error" in data:
         return _err(data)
 
@@ -117,7 +117,7 @@ from app import ext  # noqa: E402
 @ext.expose("traffic")
 async def ipc_traffic(ctx, period: str = "day", date: str = "last7") -> ActionResult:
     """Handler: ipc_traffic."""
-    data = await call_mos(ctx, "/api/analytics/traffic", {"period": period, "date": date})
+    data = await call_mos(ctx, "/api/matomo-analytics/traffic", {"period": period, "date": date})
     if "error" in data:
         return _err(data)
     return ActionResult.success(data=data)
@@ -126,7 +126,7 @@ async def ipc_traffic(ctx, period: str = "day", date: str = "last7") -> ActionRe
 @ext.expose("trends")
 async def ipc_trends(ctx) -> ActionResult:
     """Handler: ipc_trends."""
-    data = await call_mos(ctx, "/api/analytics/trends", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/trends", {})
     if "error" in data:
         return _err(data)
     return ActionResult.success(data=data)
@@ -135,7 +135,7 @@ async def ipc_trends(ctx) -> ActionResult:
 @ext.expose("top_pages")
 async def ipc_top_pages(ctx, period: str = "month", date: str = "today", limit: int = 10) -> ActionResult:
     """Handler: ipc_top_pages."""
-    data = await call_mos(ctx, "/api/analytics/top-pages", {
+    data = await call_mos(ctx, "/api/matomo-analytics/top-pages", {
         "period": period, "date": date, "limit": limit,
     })
     if "error" in data:
@@ -146,7 +146,7 @@ async def ipc_top_pages(ctx, period: str = "month", date: str = "today", limit: 
 @ext.expose("growing_pages")
 async def ipc_growing_pages(ctx, limit: int = 20) -> ActionResult:
     """Return top blog pages this month — used by WP Blogger for content plan."""
-    data = await call_mos(ctx, "/api/analytics/top-pages", {
+    data = await call_mos(ctx, "/api/matomo-analytics/top-pages", {
         "period": "month", "date": "today", "limit": limit,
     })
     if "error" in data:
@@ -164,7 +164,7 @@ async def ipc_growing_pages(ctx, limit: int = 20) -> ActionResult:
 @ext.expose("ai_referrers")
 async def ipc_ai_referrers(ctx, period: str = "month") -> ActionResult:
     """Return AI referrer traffic (ChatGPT, Perplexity, Gemini, etc.) — used by WP Blogger."""
-    data = await call_mos(ctx, "/api/analytics/ai-referrers", {
+    data = await call_mos(ctx, "/api/matomo-analytics/ai-referrers", {
         "period": period, "date": "today",
     })
     if "error" in data:

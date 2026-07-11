@@ -54,7 +54,7 @@ def _insights_ui(data: dict):
                data_model=InsightsResponse)
 async def fn_insights(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_insights."""
-    data = await call_mos(ctx, "/api/analytics/insights", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/insights", {})
     if "error" in data:
         return _err(data)
     await save_result(ctx, "insights", "What to do", data)
@@ -77,10 +77,10 @@ async def fn_daily_report(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_daily_report."""
     await ctx.progress(10, "Fetching traffic data...")
     traffic, trends, top, insights = await asyncio.gather(
-        call_mos(ctx, "/api/analytics/traffic", {"period": "day", "date": "last7"}),
-        call_mos(ctx, "/api/analytics/trends", {}),
-        call_mos(ctx, "/api/analytics/top-pages", {"period": "day", "date": "yesterday", "limit": 5}),
-        call_mos(ctx, "/api/analytics/insights", {}),
+        call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}),
+        call_mos(ctx, "/api/matomo-analytics/trends", {}),
+        call_mos(ctx, "/api/matomo-analytics/top-pages", {"period": "day", "date": "yesterday", "limit": 5}),
+        call_mos(ctx, "/api/matomo-analytics/insights", {}),
     )
     for d in (traffic, trends, top, insights):
         if "error" in d:
@@ -135,7 +135,7 @@ async def fn_daily_report(ctx, params: _EmptyParams) -> ActionResult:
                data_model=AlertListResponse)
 async def fn_anomaly_check(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_anomaly_check."""
-    data = await call_mos(ctx, "/api/analytics/insights", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/insights", {})
     if "error" in data:
         return _err(data)
     alerts = [i for i in (data.get("insights") or [])
@@ -164,7 +164,7 @@ async def fn_anomaly_check(ctx, params: _EmptyParams) -> ActionResult:
 @ext.expose("insights")
 async def ipc_insights(ctx) -> ActionResult:
     """Handler: ipc_insights."""
-    data = await call_mos(ctx, "/api/analytics/insights", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/insights", {})
     if "error" in data:
         return _err(data)
     return ActionResult.success(data=data)
@@ -173,9 +173,9 @@ async def ipc_insights(ctx) -> ActionResult:
 @ext.expose("daily_summary")
 async def ipc_daily_summary(ctx) -> ActionResult:
     """IPC: raw facts only (no AI). For aggregators like imperal-reports."""
-    traffic = await call_mos(ctx, "/api/analytics/traffic", {"period": "day", "date": "last7"})
-    trends = await call_mos(ctx, "/api/analytics/trends", {})
-    insights = await call_mos(ctx, "/api/analytics/insights", {})
+    traffic = await call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"})
+    trends = await call_mos(ctx, "/api/matomo-analytics/trends", {})
+    insights = await call_mos(ctx, "/api/matomo-analytics/insights", {})
     for d in (traffic, trends, insights):
         if "error" in d:
             return _err(d)
@@ -218,15 +218,15 @@ async def fn_blog_analytics(ctx, params: _BlogParams) -> ActionResult:
     blog_site_override = {"site_id": int(raw_blog_site)} if raw_blog_site else {}
 
     traffic, top_pages, insights = await asyncio.gather(
-        call_mos(ctx, "/api/analytics/traffic", {
+        call_mos(ctx, "/api/matomo-analytics/traffic", {
             "period": params.period, "date": params.date, "segment": blog_segment,
             **blog_site_override,
         }),
-        call_mos(ctx, "/api/analytics/top-pages", {
+        call_mos(ctx, "/api/matomo-analytics/top-pages", {
             "period": params.period, "date": params.date, "limit": 10, "segment": blog_segment,
             **blog_site_override,
         }),
-        call_mos(ctx, "/api/analytics/insights", {"segment": blog_segment, **blog_site_override}),
+        call_mos(ctx, "/api/matomo-analytics/insights", {"segment": blog_segment, **blog_site_override}),
     )
 
     for d in (traffic, top_pages, insights):

@@ -33,7 +33,7 @@ import panels_center       # noqa: E402, F401
 async def daily_summary(ctx):
     from imperal_sdk.types import ActionResult
     from api_client import call_mos
-    data = await call_mos(ctx, "/api/analytics/insights", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/insights", {})
     if "error" in data:
         return ActionResult.error(error=data["error"])
     critical = int(data.get("critical_count", 0) or 0)

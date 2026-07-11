@@ -26,7 +26,7 @@ def _matomo_reachable() -> bool:
     """Return True if MOS can reach Matomo (health check via /traffic)."""
     try:
         r = httpx.post(
-            f"{MOS}/api/analytics/traffic",
+            f"{MOS}/api/matomo-analytics/traffic",
             json={**MATOMO, "period": "day", "date": "yesterday"},
             headers=HDR,
             timeout=15,
@@ -51,7 +51,7 @@ def http():
 
 def post(http, path: str, extra: dict = None) -> dict:
     payload = {**MATOMO, **(extra or {})}
-    r = http.post(f"{MOS}/api/analytics/{path}", json=payload, headers=HDR)
+    r = http.post(f"{MOS}/api/matomo-analytics/{path}", json=payload, headers=HDR)
     assert r.status_code == 200, f"{path}: HTTP {r.status_code} — {r.text[:300]}"
     return r.json()
 
@@ -282,7 +282,7 @@ class TestFullReport:
         """22 parallel Matomo calls must finish in under 10 s."""
         payload = {**MATOMO, "period": "week", "date": "today", "limit": 5}
         t0 = time.time()
-        r = http.post(f"{MOS}/api/analytics/full-report", json=payload, headers=HDR)
+        r = http.post(f"{MOS}/api/matomo-analytics/full-report", json=payload, headers=HDR)
         elapsed = time.time() - t0
         assert r.status_code == 200
         assert elapsed < 10, f"full-report took {elapsed:.1f}s — too slow"
@@ -293,11 +293,11 @@ class TestFullReport:
 class TestErrorHandling:
     def test_bad_matomo_token_returns_502(self, http):
         payload = {**MATOMO, "token": "invalid_bad_token_xxx"}
-        r = http.post(f"{MOS}/api/analytics/traffic", json=payload, headers=HDR)
+        r = http.post(f"{MOS}/api/matomo-analytics/traffic", json=payload, headers=HDR)
         assert r.status_code == 502
 
     def test_missing_api_key_returns_401_or_403(self, http):
-        r = http.post(f"{MOS}/api/analytics/traffic",
+        r = http.post(f"{MOS}/api/matomo-analytics/traffic",
                       json=MATOMO,
                       headers={"Content-Type": "application/json"})
         assert r.status_code in (401, 403)

@@ -10,7 +10,7 @@ from api_client import call_mos
 @ext.skeleton("traffic_overview", ttl=300,
               description="Last 7 days traffic: visits, pageviews, bounce rate, avg session time, week-over-week change")
 async def skeleton_refresh_traffic_overview(ctx) -> dict:
-    data = await call_mos(ctx, "/api/analytics/traffic", {"period": "day", "date": "last7"})
+    data = await call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"})
     if "error" in data:
         s = await load_settings(ctx)
         return {"response": {
@@ -46,7 +46,7 @@ async def skeleton_refresh_traffic_overview(ctx) -> dict:
 @ext.skeleton("top_pages", ttl=600,
               description="Top 10 pages by visits this week with bounce rate and avg time on page")
 async def skeleton_refresh_top_pages(ctx) -> dict:
-    data = await call_mos(ctx, "/api/analytics/top-pages",
+    data = await call_mos(ctx, "/api/matomo-analytics/top-pages",
                           {"period": "week", "date": "thisWeek", "limit": 10})
     if "error" in data:
         return {"response": {"pages": [], "total": 0,
@@ -72,7 +72,7 @@ async def skeleton_refresh_top_pages(ctx) -> dict:
 @ext.skeleton("realtime", ttl=60,
               description="Real-time visitor counts: last 30, 60, 180 minutes")
 async def skeleton_refresh_realtime(ctx) -> dict:
-    data = await call_mos(ctx, "/api/analytics/real-time", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/real-time", {})
     if "error" in data:
         return {"response": {"visitors_30m": 0, "instruction": "Real-time data unavailable."}}
 

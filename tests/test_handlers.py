@@ -35,7 +35,7 @@ def _ctx(cfg: dict | None = None) -> MockContext:
 @pytest.mark.asyncio
 async def test_traffic_success(monkeypatch):
     async def fake_call(ctx, endpoint, extra=None):
-        assert endpoint == "/api/analytics/traffic"
+        assert endpoint == "/api/matomo-analytics/traffic"
         return {"visits": 100, "pageviews": 300, "series": []}
 
     monkeypatch.setattr(handlers_traffic, "call_mos", fake_call)
@@ -58,7 +58,7 @@ async def test_traffic_config_missing(monkeypatch):
 @pytest.mark.asyncio
 async def test_top_pages_success(monkeypatch):
     async def fake_call(ctx, endpoint, extra=None):
-        assert endpoint == "/api/analytics/top-pages"
+        assert endpoint == "/api/matomo-analytics/top-pages"
         assert extra["limit"] == 5
         return {"pages": [{"url": "/a", "views": 10}], "count": 1}
 
@@ -112,6 +112,6 @@ async def test_save_settings_partial_update():
 @pytest.mark.asyncio
 async def test_api_client_reports_missing_matomo():
     ctx = _ctx({})  # no Matomo creds
-    data = await api_client.call_mos(ctx, "/api/analytics/traffic", {})
+    data = await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {})
     assert data["_config"] is True
     assert "Matomo" in data["error"]

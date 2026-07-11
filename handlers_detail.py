@@ -32,7 +32,7 @@ def _err(data: dict) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=LiveVisitorsResponse)
 async def fn_real_time(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_real_time."""
-    data = await call_mos(ctx, "/api/analytics/real-time", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/real-time", {})
     if "error" in data:
         return _err(data)
     await save_result(ctx, "real_time", "Live visitors", data)
@@ -60,7 +60,7 @@ async def fn_real_time(ctx, params: _EmptyParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=LiveVisitorsResponse)
 async def fn_sources(ctx, params: _PeriodParams) -> ActionResult:
     """Handler: fn_sources."""
-    data = await call_mos(ctx, "/api/analytics/sources", {
+    data = await call_mos(ctx, "/api/matomo-analytics/sources", {
         "period": params.period, "date": params.date,
     })
     if "error" in data:
@@ -90,7 +90,7 @@ async def fn_sources(ctx, params: _PeriodParams) -> ActionResult:
                action_type="read", data_model=BreakdownResponse)
 async def fn_devices(ctx, params: _PeriodParams) -> ActionResult:
     """Return device type breakdown."""
-    data = await call_mos(ctx, "/api/analytics/devices", {
+    data = await call_mos(ctx, "/api/matomo-analytics/devices", {
         "period": params.period, "date": params.date,
     })
     if "error" in data:
@@ -109,7 +109,7 @@ async def fn_devices(ctx, params: _PeriodParams) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=LiveVisitorsResponse)
 async def fn_geo(ctx, params: _PeriodParams) -> ActionResult:
     """Handler: fn_geo."""
-    data = await call_mos(ctx, "/api/analytics/geo", {
+    data = await call_mos(ctx, "/api/matomo-analytics/geo", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -139,7 +139,7 @@ async def fn_geo(ctx, params: _PeriodParams) -> ActionResult:
                action_type="read", data_model=AnalyticsScalarResponse)
 async def fn_entry_exit(ctx, params: _PeriodParams) -> ActionResult:
     """Return entry and exit page rankings."""
-    data = await call_mos(ctx, "/api/analytics/entry-exit", {
+    data = await call_mos(ctx, "/api/matomo-analytics/entry-exit", {
         "period": params.period, "date": params.date, "limit": params.limit,
     })
     if "error" in data:
@@ -155,7 +155,7 @@ async def fn_entry_exit(ctx, params: _PeriodParams) -> ActionResult:
 @ext.expose("real_time")
 async def ipc_real_time(ctx) -> ActionResult:
     """Handler: ipc_real_time."""
-    data = await call_mos(ctx, "/api/analytics/real-time", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/real-time", {})
     if "error" in data:
         return _err(data)
     return ActionResult.success(data=data)
@@ -164,7 +164,7 @@ async def ipc_real_time(ctx) -> ActionResult:
 @ext.expose("sources")
 async def ipc_sources(ctx, period: str = "week", date: str = "today") -> ActionResult:
     """Handler: ipc_sources."""
-    data = await call_mos(ctx, "/api/analytics/sources", {"period": period, "date": date})
+    data = await call_mos(ctx, "/api/matomo-analytics/sources", {"period": period, "date": date})
     if "error" in data:
         return _err(data)
     return ActionResult.success(data=data)
@@ -173,7 +173,7 @@ async def ipc_sources(ctx, period: str = "week", date: str = "today") -> ActionR
 @ext.expose("devices")
 async def ipc_devices(ctx, period: str = "week", date: str = "today") -> ActionResult:
     """Handler: ipc_devices."""
-    data = await call_mos(ctx, "/api/analytics/devices", {"period": period, "date": date})
+    data = await call_mos(ctx, "/api/matomo-analytics/devices", {"period": period, "date": date})
     if "error" in data:
         return _err(data)
     return ActionResult.success(data=data)
@@ -182,7 +182,7 @@ async def ipc_devices(ctx, period: str = "week", date: str = "today") -> ActionR
 @ext.expose("geo")
 async def ipc_geo(ctx, period: str = "week", date: str = "today", limit: int = 10) -> ActionResult:
     """Handler: ipc_geo."""
-    data = await call_mos(ctx, "/api/analytics/geo", {
+    data = await call_mos(ctx, "/api/matomo-analytics/geo", {
         "period": period, "date": date, "limit": limit,
     })
     if "error" in data:
