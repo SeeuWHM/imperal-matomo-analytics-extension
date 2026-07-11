@@ -1,0 +1,1184 @@
+{
+  "manifest_schema_version": 3,
+  "sdk_version": "5.0.1",
+  "app_id": "analytics",
+  "version": "4.0.6",
+  "name": "Matomo Analytics",
+  "description": "Traffic analytics dashboard: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection from your Matomo instance.",
+  "icon": "icon.svg",
+  "actions_explicit": true,
+  "system": false,
+  "capabilities": [
+    "Traffic Overview",
+    "Top Pages & Content",
+    "Traffic Sources",
+    "Audience Insights",
+    "Real-time Visitors",
+    "Campaign Analytics",
+    "AI Daily Report",
+    "Anomaly Detection"
+  ],
+  "tools": [
+    {
+      "name": "analytics",
+      "description": "Traffic analytics powered by Matomo. Use for ANY question about: visits, pageviews, bounce rate, sessions, traffic sources, top pages, countries, devices, new vs returning visitors, UTM campaigns, social networks, real-time visitors, traffic trends, anomalies, daily reports, audience insights. Keywords: \u0442\u0440\u0430\u0444\u0438\u043a, \u043f\u043e\u0441\u0435\u0442\u0438\u0442\u0435\u043b\u0438, \u0432\u0438\u0437\u0438\u0442\u044b, \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u044b, \u0430\u043d\u0430\u043b\u0438\u0442\u0438\u043a\u0430 \u0441\u0430\u0439\u0442\u0430, \u043e\u0442\u043a\u0443\u0434\u0430 \u0442\u0440\u0430\u0444\u0438\u043a, \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u044b, \u0441\u0442\u0440\u0430\u043d\u044b, \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0430, \u0430\u043d\u043e\u043c\u0430\u043b\u0438\u0438.",
+      "scopes": [],
+      "parameters": {
+        "message": {
+          "type": "string",
+          "required": false
+        },
+        "kwargs": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "skeleton_refresh_traffic_overview",
+      "description": "Last 7 days traffic: visits, pageviews, bounce rate, avg session time, week-over-week change",
+      "scopes": [],
+      "parameters": {}
+    },
+    {
+      "name": "skeleton_refresh_top_pages",
+      "description": "Top 10 pages by visits this week with bounce rate and avg time on page",
+      "scopes": [],
+      "parameters": {}
+    },
+    {
+      "name": "skeleton_refresh_realtime",
+      "description": "Real-time visitor counts: last 30, 60, 180 minutes",
+      "scopes": [],
+      "parameters": {}
+    },
+    {
+      "name": "skeleton_refresh_matomo_config",
+      "description": "Matomo connection status, site URL, site ID, blog URL, UTM dimension ID",
+      "scopes": [],
+      "parameters": {}
+    },
+    {
+      "name": "traffic",
+      "description": "Get site traffic summary: visits, pageviews, bounce rate over a period.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "day",
+            "description": "Matomo period granularity",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year",
+              "range"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "last7",
+            "description": "Matomo date token. Common: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth. For period=range pass YYYY-MM-DD,YYYY-MM-DD.",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "title": "TrafficParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "top_pages",
+      "description": "Top pages by visits for a given period.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "month",
+            "description": "Matomo period granularity",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year",
+              "range"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date token (see TrafficParams)",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 10,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "TopPagesParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "trends",
+      "description": "Compare this week's traffic vs the previous week.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "description": "No params - compares the last 7 full days to the 7 before that.",
+        "properties": {},
+        "title": "TrendsParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "save_settings",
+      "description": "Save the Analytics extension settings (server + Matomo credentials).",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "update:settings"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "description": "Form payload - user's own Matomo only. Server creds are baked-in.",
+        "properties": {
+          "matomo_url": {
+            "default": "",
+            "title": "Matomo Url",
+            "type": "string"
+          },
+          "matomo_token": {
+            "default": "",
+            "title": "Matomo Token",
+            "type": "string"
+          },
+          "matomo_site_id": {
+            "default": 1,
+            "title": "Matomo Site Id",
+            "type": "integer"
+          },
+          "matomo_segment": {
+            "default": "",
+            "title": "Matomo Segment",
+            "type": "string"
+          }
+        },
+        "title": "SaveSettingsParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.settings.saved",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "real_time",
+      "description": "Live visitor counts (30 / 60 / 180 min).",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {},
+        "title": "_EmptyParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "sources",
+      "description": "Traffic sources - direct / search / social / referrers.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 10,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_PeriodParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "devices",
+      "description": "Device breakdown - desktop / smartphone / tablet.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 10,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_PeriodParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "geo",
+      "description": "Top countries by visitors.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 10,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_PeriodParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "entry_exit",
+      "description": "Top entry pages (landing) + top exit pages.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 10,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_PeriodParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "insights",
+      "description": "Rule-based actionable insights: anomalies, hotspots, growth opportunities. Free (no AI tokens).",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {},
+        "title": "_EmptyParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "daily_report",
+      "description": "Daily traffic brief with AI narration. USES AI TOKENS. Runs in background \u2014 result auto-delivered to chat when done.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {},
+        "title": "_EmptyParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "anomaly_check",
+      "description": "Spot anomalies against the last 7 days. Free (no AI tokens).",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {},
+        "title": "_EmptyParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "regions",
+      "description": "Visitor breakdown by city and region.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "device_brands",
+      "description": "Phone and tablet brands (Apple, Samsung, etc.).",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "browsers",
+      "description": "Browser and operating system distribution.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "search_engines",
+      "description": "Which search engines send organic traffic.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "organic_keywords",
+      "description": "Organic search keywords (may show 'not provided' if encrypted).",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "campaigns",
+      "description": "UTM campaign performance.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "social_networks",
+      "description": "Social network traffic breakdown.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "referring_sites",
+      "description": "Referral websites sending visitors.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "site_search",
+      "description": "Internal site search terms including zero-result queries.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "new_vs_returning",
+      "description": "New vs returning visitor ratio.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "visit_duration",
+      "description": "Session duration distribution buckets.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "languages",
+      "description": "Visitor browser language preferences.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "providers",
+      "description": "ISP and network providers of visitors.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "screen_resolutions",
+      "description": "Screen resolution distribution of visitors.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "page_details",
+      "description": "All pages with time-on-page, bounce rate, and avg actions.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "outlinks",
+      "description": "Outbound link clicks tracked by Matomo.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "blog_analytics",
+      "description": "Traffic and top content for the blog subdomain only. Filters Matomo to blog pages. Use for: \u0430\u043d\u0430\u043b\u0438\u0442\u0438\u043a\u0430 \u0431\u043b\u043e\u0433\u0430, \u0442\u043e\u043f \u0441\u0442\u0430\u0442\u044c\u0438, \u0442\u0440\u0430\u0444\u0438\u043a \u0431\u043b\u043e\u0433\u0430, blog traffic, which articles perform best.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "month",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "title": "_BlogParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "conversions",
+      "description": "Goal conversions from Matomo: purchases (cart complete), checkouts started, conversion rate. Use for: \u043a\u043e\u043d\u0432\u0435\u0440\u0441\u0438\u0438, \u043f\u043e\u043a\u0443\u043f\u043a\u0438, \u0437\u0430\u043a\u0430\u0437\u044b, \u0441\u043a\u043e\u043b\u044c\u043a\u043e \u043a\u0443\u043f\u0438\u043b\u0438, checkout, \u0432\u043e\u0440\u043e\u043d\u043a\u0430 \u043f\u0440\u043e\u0434\u0430\u0436.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "month",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "title": "_ConversionsParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "events",
+      "description": "Custom tracking events: engagement (scrolls) and ecommerce events (begin_checkout). Use for: \u0441\u043e\u0431\u044b\u0442\u0438\u044f, engagement events, scroll depth, ecommerce events.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "utm_sources",
+      "description": "UTM source breakdown from custom dimensions \u2014 shows which sources sent tagged traffic including AI sources. Use for: utm \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a\u0438, utm_source, tagged traffic, ChatGPT with UTM.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "ai_referrers",
+      "description": "Which AI assistants and LLMs send traffic \u2014 ChatGPT, Perplexity, Claude, Gemini, DeepSeek, Grok, Copilot, and more. Shows visits and trend vs previous period.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "month",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "title": "_AIReferrersParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "full_report",
+      "description": "Fetch ALL analytics data in one call \u2014 traffic, geo, devices, referrers, AI referrers, engagement, audience. Runs in background.",
+      "action_type": "read",
+      "chain_callable": false,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {},
+      "event": "analytics.action.result",
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    }
+  ],
+  "signals": [],
+  "schedules": [
+    {
+      "name": "daily_summary",
+      "cron": "0 9 * * *"
+    }
+  ],
+  "required_scopes": [],
+  "icon_size_bytes": 317,
+  "exposed": [
+    {
+      "name": "traffic",
+      "action_type": "read"
+    },
+    {
+      "name": "trends",
+      "action_type": "read"
+    },
+    {
+      "name": "top_pages",
+      "action_type": "read"
+    },
+    {
+      "name": "growing_pages",
+      "action_type": "read"
+    },
+    {
+      "name": "real_time",
+      "action_type": "read"
+    },
+    {
+      "name": "sources",
+      "action_type": "read"
+    },
+    {
+      "name": "devices",
+      "action_type": "read"
+    },
+    {
+      "name": "geo",
+      "action_type": "read"
+    },
+    {
+      "name": "insights",
+      "action_type": "read"
+    },
+    {
+      "name": "daily_summary",
+      "action_type": "read"
+    },
+    {
+      "name": "full_report",
+      "action_type": "read"
+    },
+    {
+      "name": "ai_referrers",
+      "action_type": "read"
+    }
+  ],
+  "lifecycle": {
+    "on_install": true,
+    "health_check": {
+      "interval_sec": 60
+    }
+  },
+  "lifecycle_hooks": {
+    "on_install": {
+      "signature": "(ctx)"
+    }
+  },
+  "category": "marketing"
+}

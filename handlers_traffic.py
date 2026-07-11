@@ -1,0 +1,183 @@
+"""Chat-function handlers for traffic, trends, top pages."""
+# Note: no `from __future__ import annotations` - the V6 validator reads
+# type annotations via inspect.signature and can only recognise BaseModel
+# subclasses when annotations are real types, not PEP 563 strings.
+
+from imperal_sdk import ui
+from imperal_sdk.types import ActionResult
+
+from app import chat, save_result, load_settings, matomo_ready
+from api_client import call_mos
+from params import TrafficParams, TopPagesParams, TrendsParams
+
+
+def _err(data: dict) -> ActionResult:
+    """Translate a call_mos error dict into an ActionResult."""
+    return ActionResult.error(error=data.get("error", "unknown error"))
+
+
+@chat.function(
+    "traffic",
+    description="Website visits summary: total visits, pageviews, unique visitors, bounce rate, "
+                "avg time on site, daily/weekly/monthly series. "
+                "Use for: покажи трафик, сколько посетителей, визиты за период, "
+                "pageviews, сводка по трафику, traffic overview, how many visitors.",
+    action_type="read",
+)
+async def fn_traffic(ctx, params: TrafficParams) -> ActionResult:
+    """Return visits/pageviews summary from Matomo for the requested period."""
+    data = await call_mos(ctx, "/api/analytics/traffic", {
+        "period": params.period, "date": params.date,
+    })
+    if "error" in data:
+        return _err(data)
+
+    visits = data.get("visits", 0)
+    pageviews = data.get("pageviews", 0)
+    summary = f"{visits} visits, {pageviews} pageviews ({params.period} {params.date})"
+    return ActionResult.success(data=data, summary=summary)
+
+
+@chat.function(
+    "top_pages",
+    description="Most visited pages ranked by visits with bounce rate and avg time on page. "
+                "Use for: топ страниц, популярные страницы, какие страницы смотрят, "
+                "most popular content, best performing pages, top content.",
+    action_type="read",
+    event="analytics.action.result",
+)
+async def fn_top_pages(ctx, params: TopPagesParams) -> ActionResult:
+    """Return the N most visited pages for the chosen period and segment."""
+    data = await call_mos(ctx, "/api/analytics/top-pages", {
+        "period": params.period, "date": params.date, "limit": params.limit,
+    })
+    if "error" in data:
+        return _err(data)
+
+    await save_result(ctx, "top_pages", "Top 10 pages", data)
+    pages = data.get("pages") or []
+    rows = [{"url": (p.get("url") or "/")[:70],
+             "visits": f"{p.get('views', 0):,}",
+             "bounce": p.get("bounce_rate", "-")}
+            for p in pages[:15]]
+    ui_node = ui.DataTable(
+        columns=[
+            ui.DataColumn(key="url", label="Page", width="60%"),
+            ui.DataColumn(key="visits", label="Visits", width="20%"),
+            ui.DataColumn(key="bounce", label="Bounce", width="20%"),
+        ],
+        rows=rows,
+    ) if rows else ui.Empty(message="No data")
+    return ActionResult.success(
+        data=data,
+        summary=f"Top {len(pages)} pages ({params.period} {params.date})",
+        ui=ui_node,
+    )
+
+
+@chat.function(
+    "trends",
+    description="Week-over-week traffic comparison: this week vs last week, % change, direction. "
+                "Use for: трафик растёт или падает, сравни недели, WoW, "
+                "week over week, растёт ли сайт, динамика трафика, трафик вверх или вниз.",
+    action_type="read",
+    event="analytics.action.result",
+)
+async def fn_trends(ctx, params: TrendsParams) -> ActionResult:
+    """Return week-over-week visits and the % change, plus up/down direction."""
+    data = await call_mos(ctx, "/api/analytics/trends", {})
+    if "error" in data:
+        return _err(data)
+
+    await save_result(ctx, "trends", "Week vs last week", data)
+    change = data.get("change_percent", 0)
+    direction = data.get("direction", "flat")
+    cw = data.get("current_week", 0)
+    pw = data.get("previous_week", 0)
+    color = "green" if direction == "up" else "red" if direction == "down" else "gray"
+    return ActionResult.success(
+        data=data,
+        summary=f"This week {cw:,} vs last week {pw:,} ({change:+.1f}%)",
+        ui=ui.Stats(children=[
+            ui.Stat(label="This week", value=f"{cw:,}", color=color),
+            ui.Stat(label="Last week", value=f"{pw:,}", color="gray"),
+            ui.Stat(label="WoW Δ", value=f"{change:+.1f}%", color=color),
+        ]),
+    )
+
+
+# IPC - callable from other extensions (e.g. imperal-reports aggregator)
+from app import ext  # noqa: E402
+
+
+@ext.expose("traffic")
+async def ipc_traffic(ctx, period: str = "day", date: str = "last7") -> ActionResult:
+    """Handler: ipc_traffic."""
+    data = await call_mos(ctx, "/api/analytics/traffic", {"period": period, "date": date})
+    if "error" in data:
+        return _err(data)
+    return ActionResult.success(data=data)
+
+
+@ext.expose("trends")
+async def ipc_trends(ctx) -> ActionResult:
+    """Handler: ipc_trends."""
+    data = await call_mos(ctx, "/api/analytics/trends", {})
+    if "error" in data:
+        return _err(data)
+    return ActionResult.success(data=data)
+
+
+@ext.expose("top_pages")
+async def ipc_top_pages(ctx, period: str = "month", date: str = "today", limit: int = 10) -> ActionResult:
+    """Handler: ipc_top_pages."""
+    data = await call_mos(ctx, "/api/analytics/top-pages", {
+        "period": period, "date": date, "limit": limit,
+    })
+    if "error" in data:
+        return _err(data)
+    return ActionResult.success(data=data)
+
+
+@ext.expose("growing_pages")
+async def ipc_growing_pages(ctx, limit: int = 20) -> ActionResult:
+    """Return top blog pages this month — used by WP Blogger for content plan."""
+    data = await call_mos(ctx, "/api/analytics/top-pages", {
+        "period": "month", "date": "today", "limit": limit,
+    })
+    if "error" in data:
+        return _err(data)
+    pages = data.get("pages") or []
+    # filter to blog pages and format for content plan
+    blog_pages = [
+        {"url": p.get("url", ""), "visits": p.get("views", 0), "growth_pct": 0}
+        for p in pages
+        if "/blog" in (p.get("url") or "")
+    ]
+    return ActionResult.success(data={"pages": blog_pages, "count": len(blog_pages)})
+
+
+@ext.expose("ai_referrers")
+async def ipc_ai_referrers(ctx, period: str = "month") -> ActionResult:
+    """Return AI referrer traffic (ChatGPT, Perplexity, Gemini, etc.) — used by WP Blogger."""
+    data = await call_mos(ctx, "/api/analytics/ai-referrers", {
+        "period": period, "date": "today",
+    })
+    if "error" in data:
+        return _err(data)
+    return ActionResult.success(data=data)
+
+
+@ext.expose("matomo_config")
+async def ipc_matomo_config(ctx) -> ActionResult:
+    """Share Matomo config with other extensions — no credentials re-entry needed."""
+    s = await load_settings(ctx)
+    if not matomo_ready(s):
+        return ActionResult.error(error="Matomo not configured in Analytics extension.")
+    return ActionResult.success(data={
+        "matomo_url":     s.get("matomo_url", ""),
+        "matomo_token":   s.get("matomo_token", ""),
+        "matomo_site_id": s.get("matomo_site_id", 1),
+        "matomo_segment": s.get("matomo_segment", ""),
+        "configured": True,
+    })
