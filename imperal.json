@@ -1,6 +1,6 @@
 {
   "manifest_schema_version": 3,
-  "sdk_version": "5.0.1",
+  "sdk_version": "5.9.3",
   "app_id": "analytics",
   "version": "4.0.6",
   "name": "Matomo Analytics",
@@ -19,21 +19,6 @@
     "Anomaly Detection"
   ],
   "tools": [
-    {
-      "name": "analytics",
-      "description": "Traffic analytics powered by Matomo. Use for ANY question about: visits, pageviews, bounce rate, sessions, traffic sources, top pages, countries, devices, new vs returning visitors, UTM campaigns, social networks, real-time visitors, traffic trends, anomalies, daily reports, audience insights. Keywords: \u0442\u0440\u0430\u0444\u0438\u043a, \u043f\u043e\u0441\u0435\u0442\u0438\u0442\u0435\u043b\u0438, \u0432\u0438\u0437\u0438\u0442\u044b, \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u044b, \u0430\u043d\u0430\u043b\u0438\u0442\u0438\u043a\u0430 \u0441\u0430\u0439\u0442\u0430, \u043e\u0442\u043a\u0443\u0434\u0430 \u0442\u0440\u0430\u0444\u0438\u043a, \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u044b, \u0441\u0442\u0440\u0430\u043d\u044b, \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0430, \u0430\u043d\u043e\u043c\u0430\u043b\u0438\u0438.",
-      "scopes": [],
-      "parameters": {
-        "message": {
-          "type": "string",
-          "required": false
-        },
-        "kwargs": {
-          "type": "string",
-          "required": true
-        }
-      }
-    },
     {
       "name": "skeleton_refresh_traffic_overview",
       "description": "Last 7 days traffic: visits, pageviews, bounce rate, avg session time, week-over-week change",
@@ -60,16 +45,16 @@
     },
     {
       "name": "traffic",
-      "description": "Get site traffic summary: visits, pageviews, bounce rate over a period.",
+      "description": "Website visits summary: total visits, pageviews, unique visitors, bounce rate, avg time on site, daily/weekly/monthly series. Use for: покажи трафик, сколько посетителей, визиты за период, pageviews, сводка по трафику, traffic overview, how many visitors.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
         "properties": {
           "period": {
             "default": "day",
-            "description": "Matomo period granularity",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
             "enum": [
               "day",
               "week",
@@ -82,7 +67,7 @@
           },
           "date": {
             "default": "last7",
-            "description": "Matomo date token. Common: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth. For period=range pass YYYY-MM-DD,YYYY-MM-DD.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           }
@@ -90,23 +75,106 @@
         "title": "TrafficParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "properties": {
+          "visits": {
+            "default": 0,
+            "title": "Visits",
+            "type": "integer"
+          },
+          "pageviews": {
+            "default": 0,
+            "title": "Pageviews",
+            "type": "integer"
+          },
+          "unique_visitors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Unique Visitors"
+          },
+          "bounce_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bounce Rate"
+          },
+          "avg_time_on_site": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Avg Time On Site"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Period"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Date"
+          }
+        },
+        "title": "TrafficOverviewRecord",
+        "type": "object"
+      },
       "event": "",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "top_pages",
-      "description": "Top pages by visits for a given period.",
+      "description": "Most visited pages ranked by visits with bounce rate and avg time on page. Use for: топ страниц, популярные страницы, какие страницы смотрят, most popular content, best performing pages, top content.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
         "properties": {
           "period": {
             "default": "month",
-            "description": "Matomo period granularity",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
             "enum": [
               "day",
               "week",
@@ -119,7 +187,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date token (see TrafficParams)",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -134,16 +202,102 @@
         "title": "TopPagesParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "$defs": {
+          "PageMetricRecord": {
+            "properties": {
+              "url": {
+                "default": "",
+                "title": "Url",
+                "type": "string"
+              },
+              "title": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Title"
+              },
+              "views": {
+                "default": 0,
+                "title": "Views",
+                "type": "integer"
+              },
+              "visits": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Visits"
+              },
+              "bounce_rate": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Bounce Rate"
+              },
+              "avg_time_on_page": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Avg Time On Page"
+              }
+            },
+            "title": "PageMetricRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "pages": {
+            "items": {
+              "$ref": "#/$defs/PageMetricRecord"
+            },
+            "title": "Pages",
+            "type": "array"
+          }
+        },
+        "title": "PageListResponse",
+        "type": "object"
+      },
       "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "trends",
-      "description": "Compare this week's traffic vs the previous week.",
+      "description": "Week-over-week traffic comparison: this week vs last week, % change, direction. Use for: трафик растёт или падает, сравни недели, WoW, week over week, растёт ли сайт, динамика трафика, трафик вверх или вниз.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
@@ -152,8 +306,35 @@
         "title": "TrendsParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "properties": {
+          "current_week": {
+            "default": 0,
+            "title": "Current Week",
+            "type": "integer"
+          },
+          "previous_week": {
+            "default": 0,
+            "title": "Previous Week",
+            "type": "integer"
+          },
+          "change_percent": {
+            "default": 0.0,
+            "title": "Change Percent",
+            "type": "number"
+          },
+          "direction": {
+            "default": "flat",
+            "title": "Direction",
+            "type": "string"
+          }
+        },
+        "title": "TrendSummaryResponse",
+        "type": "object"
+      },
       "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
@@ -188,6 +369,21 @@
             "default": "",
             "title": "Matomo Segment",
             "type": "string"
+          },
+          "blog_url": {
+            "default": "",
+            "title": "Blog Url",
+            "type": "string"
+          },
+          "blog_site_id": {
+            "default": 0,
+            "title": "Blog Site Id",
+            "type": "integer"
+          },
+          "utm_source_dim_id": {
+            "default": 0,
+            "title": "Utm Source Dim Id",
+            "type": "integer"
           }
         },
         "title": "SaveSettingsParams",
@@ -195,14 +391,16 @@
       },
       "return_schema": {},
       "event": "analytics.settings.saved",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "real_time",
-      "description": "Live visitor counts (30 / 60 / 180 min).",
+      "description": "Live active visitors right now: 30 min / 60 min / 3 hour windows. Use for: сколько людей сейчас на сайте, онлайн посетители, live visitors, real-time, кто сейчас.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
@@ -210,32 +408,89 @@
         "title": "_EmptyParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "$defs": {
+          "LiveVisitorsWindow": {
+            "properties": {
+              "visitors": {
+                "default": 0,
+                "title": "Visitors",
+                "type": "integer"
+              }
+            },
+            "title": "LiveVisitorsWindow",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "live_30m": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LiveVisitorsWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "live_60m": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LiveVisitorsWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "live_180m": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LiveVisitorsWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "title": "LiveVisitorsResponse",
+        "type": "object"
+      },
       "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "sources",
-      "description": "Traffic sources - direct / search / social / referrers.",
+      "description": "Traffic sources breakdown: Direct Entry, Search Engines, Websites, Social Networks, Campaigns. ALWAYS use for: откуда идёт трафик, откуда трафик на сайт, источники трафика, откуда приходят люди, топ источников, прямые переходы, реферальные ссылки, поисковый трафик, direct vs organic, where does traffic come from, traffic sources.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
         "properties": {
           "period": {
             "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
             "title": "Period",
             "type": "string"
           },
           "date": {
             "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
           "limit": {
             "default": 10,
+            "maximum": 100,
+            "minimum": 1,
             "title": "Limit",
             "type": "integer"
           }
@@ -243,32 +498,89 @@
         "title": "_PeriodParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "$defs": {
+          "LiveVisitorsWindow": {
+            "properties": {
+              "visitors": {
+                "default": 0,
+                "title": "Visitors",
+                "type": "integer"
+              }
+            },
+            "title": "LiveVisitorsWindow",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "live_30m": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LiveVisitorsWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "live_60m": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LiveVisitorsWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "live_180m": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LiveVisitorsWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "title": "LiveVisitorsResponse",
+        "type": "object"
+      },
       "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "devices",
-      "description": "Device breakdown - desktop / smartphone / tablet.",
+      "description": "Device type split: Desktop vs Smartphone vs Tablet percentages. Use for: с каких устройств, мобильные vs десктоп, mobile traffic share, сколько с телефона, desktop percentage.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
         "properties": {
           "period": {
             "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
             "title": "Period",
             "type": "string"
           },
           "date": {
             "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
           "limit": {
             "default": 10,
+            "maximum": 100,
+            "minimum": 1,
             "title": "Limit",
             "type": "integer"
           }
@@ -276,32 +588,73 @@
         "title": "_PeriodParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
       "event": "",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "geo",
-      "description": "Top countries by visitors.",
+      "description": "Top countries by visitor count with percentages. Use for: из каких стран, топ страны, география трафика, откуда люди, США Индия Китай, country breakdown, where visitors come from.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
         "properties": {
           "period": {
             "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
             "title": "Period",
             "type": "string"
           },
           "date": {
             "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
           "limit": {
             "default": 10,
+            "maximum": 100,
+            "minimum": 1,
             "title": "Limit",
             "type": "integer"
           }
@@ -309,32 +662,89 @@
         "title": "_PeriodParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "$defs": {
+          "LiveVisitorsWindow": {
+            "properties": {
+              "visitors": {
+                "default": 0,
+                "title": "Visitors",
+                "type": "integer"
+              }
+            },
+            "title": "LiveVisitorsWindow",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "live_30m": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LiveVisitorsWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "live_60m": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LiveVisitorsWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "live_180m": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LiveVisitorsWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "title": "LiveVisitorsResponse",
+        "type": "object"
+      },
       "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "entry_exit",
-      "description": "Top entry pages (landing) + top exit pages.",
+      "description": "Top landing pages (where sessions start) + top exit pages (where visitors leave). Use for: где люди выходят, на каких страницах уходят, exit pages, точки входа, landing pages, корзина теряет людей, где теряем посетителей.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
         "properties": {
           "period": {
             "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
             "title": "Period",
             "type": "string"
           },
           "date": {
             "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
           "limit": {
             "default": 10,
+            "maximum": 100,
+            "minimum": 1,
             "title": "Limit",
             "type": "integer"
           }
@@ -342,16 +752,28 @@
         "title": "_PeriodParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "title": "AnalyticsScalarResponse",
+        "type": "object"
+      },
       "event": "",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "insights",
-      "description": "Rule-based actionable insights: anomalies, hotspots, growth opportunities. Free (no AI tokens).",
+      "description": "Actionable insights: traffic drops, high bounce hotspots, growing/dying pages. Free, no AI tokens. Use for: что нужно исправить, аномалии, проблемы с сайтом, что плохо работает, что делать, где теряем трафик, recommendations.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
@@ -359,16 +781,73 @@
         "title": "_EmptyParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "$defs": {
+          "InsightItem": {
+            "properties": {
+              "severity": {
+                "default": "info",
+                "title": "Severity",
+                "type": "string"
+              },
+              "title": {
+                "default": "",
+                "title": "Title",
+                "type": "string"
+              },
+              "detail": {
+                "default": "",
+                "title": "Detail",
+                "type": "string"
+              },
+              "action": {
+                "default": "",
+                "title": "Action",
+                "type": "string"
+              }
+            },
+            "title": "InsightItem",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "critical_count": {
+            "default": 0,
+            "title": "Critical Count",
+            "type": "integer"
+          },
+          "warning_count": {
+            "default": 0,
+            "title": "Warning Count",
+            "type": "integer"
+          },
+          "insights": {
+            "items": {
+              "$ref": "#/$defs/InsightItem"
+            },
+            "title": "Insights",
+            "type": "array"
+          }
+        },
+        "title": "InsightsResponse",
+        "type": "object"
+      },
       "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "daily_report",
-      "description": "Daily traffic brief with AI narration. USES AI TOKENS. Runs in background \u2014 result auto-delivered to chat when done.",
+      "description": "Daily traffic brief with AI narration. USES AI TOKENS. Runs in background — result auto-delivered to chat when done.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
@@ -376,8 +855,25 @@
         "title": "_EmptyParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "properties": {
+          "brief": {
+            "default": "",
+            "title": "Brief",
+            "type": "string"
+          },
+          "facts": {
+            "default": "",
+            "title": "Facts",
+            "type": "string"
+          }
+        },
+        "title": "DailyReportResponse",
+        "type": "object"
+      },
       "event": "analytics.action.result",
+      "background": true,
+      "long_running": true,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
@@ -385,7 +881,7 @@
       "name": "anomaly_check",
       "description": "Spot anomalies against the last 7 days. Free (no AI tokens).",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
@@ -393,555 +889,76 @@
         "title": "_EmptyParams",
         "type": "object"
       },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "regions",
-      "description": "Visitor breakdown by city and region.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
+      "return_schema": {
+        "$defs": {
+          "InsightItem": {
+            "properties": {
+              "severity": {
+                "default": "info",
+                "title": "Severity",
+                "type": "string"
+              },
+              "title": {
+                "default": "",
+                "title": "Title",
+                "type": "string"
+              },
+              "detail": {
+                "default": "",
+                "title": "Detail",
+                "type": "string"
+              },
+              "action": {
+                "default": "",
+                "title": "Action",
+                "type": "string"
+              }
+            },
+            "title": "InsightItem",
+            "type": "object"
           }
         },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "device_brands",
-      "description": "Phone and tablet brands (Apple, Samsung, etc.).",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
         "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
+          "count": {
+            "default": 0,
+            "title": "Count",
             "type": "integer"
+          },
+          "alerts": {
+            "items": {
+              "$ref": "#/$defs/InsightItem"
+            },
+            "title": "Alerts",
+            "type": "array"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AlertListResponse",
         "type": "object"
       },
-      "return_schema": {},
       "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "browsers",
-      "description": "Browser and operating system distribution.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "search_engines",
-      "description": "Which search engines send organic traffic.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "organic_keywords",
-      "description": "Organic search keywords (may show 'not provided' if encrypted).",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "campaigns",
-      "description": "UTM campaign performance.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "social_networks",
-      "description": "Social network traffic breakdown.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "referring_sites",
-      "description": "Referral websites sending visitors.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "site_search",
-      "description": "Internal site search terms including zero-result queries.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "new_vs_returning",
-      "description": "New vs returning visitor ratio.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "visit_duration",
-      "description": "Session duration distribution buckets.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "languages",
-      "description": "Visitor browser language preferences.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "providers",
-      "description": "ISP and network providers of visitors.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "screen_resolutions",
-      "description": "Screen resolution distribution of visitors.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "page_details",
-      "description": "All pages with time-on-page, bounce rate, and avg actions.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "outlinks",
-      "description": "Outbound link clicks tracked by Matomo.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "blog_analytics",
-      "description": "Traffic and top content for the blog subdomain only. Filters Matomo to blog pages. Use for: \u0430\u043d\u0430\u043b\u0438\u0442\u0438\u043a\u0430 \u0431\u043b\u043e\u0433\u0430, \u0442\u043e\u043f \u0441\u0442\u0430\u0442\u044c\u0438, \u0442\u0440\u0430\u0444\u0438\u043a \u0431\u043b\u043e\u0433\u0430, blog traffic, which articles perform best.",
+      "description": "Traffic and top content for the blog subdomain only (e.g. blog.example.com). Filters Matomo to blog pages, shows top articles, traffic, trends. Use for: аналитика блога, топ статьи, трафик блога, blog traffic, which articles perform best, блог статистика, blog.webhostmost.com, контент который читают.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
         "properties": {
           "period": {
             "default": "month",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
             "title": "Period",
             "type": "string"
           },
           "date": {
             "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           }
@@ -949,121 +966,41 @@
         "title": "_BlogParams",
         "type": "object"
       },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "conversions",
-      "description": "Goal conversions from Matomo: purchases (cart complete), checkouts started, conversion rate. Use for: \u043a\u043e\u043d\u0432\u0435\u0440\u0441\u0438\u0438, \u043f\u043e\u043a\u0443\u043f\u043a\u0438, \u0437\u0430\u043a\u0430\u0437\u044b, \u0441\u043a\u043e\u043b\u044c\u043a\u043e \u043a\u0443\u043f\u0438\u043b\u0438, checkout, \u0432\u043e\u0440\u043e\u043d\u043a\u0430 \u043f\u0440\u043e\u0434\u0430\u0436.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
+      "return_schema": {
         "properties": {
-          "period": {
-            "default": "month",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
           }
         },
-        "title": "_ConversionsParams",
+        "title": "AnalyticsScalarResponse",
         "type": "object"
       },
-      "return_schema": {},
       "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "events",
-      "description": "Custom tracking events: engagement (scrolls) and ecommerce events (begin_checkout). Use for: \u0441\u043e\u0431\u044b\u0442\u0438\u044f, engagement events, scroll depth, ecommerce events.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "utm_sources",
-      "description": "UTM source breakdown from custom dimensions \u2014 shows which sources sent tagged traffic including AI sources. Use for: utm \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a\u0438, utm_source, tagged traffic, ChatGPT with UTM.",
-      "action_type": "read",
-      "chain_callable": false,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {},
-      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
       "name": "ai_referrers",
-      "description": "Which AI assistants and LLMs send traffic \u2014 ChatGPT, Perplexity, Claude, Gemini, DeepSeek, Grok, Copilot, and more. Shows visits and trend vs previous period.",
+      "description": "Which AI assistants and LLMs send traffic — ChatGPT, Perplexity, Claude, Gemini, DeepSeek, Grok, Copilot. Combines referrer detection + UTM tracking. Default period=month for meaningful data. Use for: с каких нейросетей трафик, ChatGPT traffic, AI referrers, нейронки шлют трафик, which AI sends visitors, LLM traffic.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
         "properties": {
           "period": {
             "default": "month",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
             "title": "Period",
             "type": "string"
           },
           "date": {
             "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           }
@@ -1071,32 +1008,186 @@
         "title": "_AIReferrersParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "$defs": {
+          "AIReferrerRecord": {
+            "properties": {
+              "source": {
+                "default": "",
+                "title": "Source",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "change_pct": {
+                "default": 0.0,
+                "title": "Change Pct",
+                "type": "number"
+              }
+            },
+            "title": "AIReferrerRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "total_visits": {
+            "default": 0,
+            "title": "Total Visits",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/$defs/AIReferrerRecord"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "title": "AIReferrersResponse",
+        "type": "object"
+      },
       "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     },
     {
-      "name": "full_report",
-      "description": "Fetch ALL analytics data in one call \u2014 traffic, geo, devices, referrers, AI referrers, engagement, audience. Runs in background.",
+      "name": "conversions",
+      "description": "Goal conversions from Matomo: purchases (cart complete), checkouts started, conversion rate. Use for: конверсии, покупки, заказы, сколько купили, checkout, воронка продаж, purchase funnel, how many orders.",
       "action_type": "read",
-      "chain_callable": false,
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "month",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "title": "_ConversionsParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "GoalRecord": {
+            "properties": {
+              "name": {
+                "default": "",
+                "title": "Name",
+                "type": "string"
+              },
+              "conversions": {
+                "default": 0,
+                "title": "Conversions",
+                "type": "integer"
+              },
+              "conversion_rate": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Conversion Rate"
+              },
+              "revenue": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Revenue"
+              }
+            },
+            "title": "GoalRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "has_goals": {
+            "default": false,
+            "title": "Has Goals",
+            "type": "boolean"
+          },
+          "total_conversions": {
+            "default": 0,
+            "title": "Total Conversions",
+            "type": "integer"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/$defs/GoalRecord"
+            },
+            "title": "Goals",
+            "type": "array"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          }
+        },
+        "title": "ConversionsResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "events",
+      "description": "Custom tracking events: engagement (scrolls, clicks) and ecommerce events (begin_checkout). Use for: события, события аналитики, engagement events, scroll depth, ecommerce events, what is being tracked.",
+      "action_type": "read",
+      "chain_callable": true,
       "effects": [],
       "id_projection": "",
       "params_schema": {
         "properties": {
           "period": {
             "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
             "title": "Period",
             "type": "string"
           },
           "date": {
             "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
           "limit": {
             "default": 20,
+            "maximum": 100,
+            "minimum": 1,
             "title": "Limit",
             "type": "integer"
           }
@@ -1104,8 +1195,1382 @@
         "title": "_AudienceParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "$defs": {
+          "EventActionRecord": {
+            "properties": {
+              "action": {
+                "default": "",
+                "title": "Action",
+                "type": "string"
+              }
+            },
+            "title": "EventActionRecord",
+            "type": "object"
+          },
+          "EventCategoryRecord": {
+            "properties": {
+              "category": {
+                "default": "",
+                "title": "Category",
+                "type": "string"
+              },
+              "events": {
+                "default": 0,
+                "title": "Events",
+                "type": "integer"
+              },
+              "actions": {
+                "items": {
+                  "$ref": "#/$defs/EventActionRecord"
+                },
+                "title": "Actions",
+                "type": "array"
+              }
+            },
+            "title": "EventCategoryRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "total_events": {
+            "default": 0,
+            "title": "Total Events",
+            "type": "integer"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/$defs/EventCategoryRecord"
+            },
+            "title": "Categories",
+            "type": "array"
+          }
+        },
+        "title": "EventsResponse",
+        "type": "object"
+      },
       "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "utm_sources",
+      "description": "UTM source breakdown from custom dimensions — shows which sources sent tagged traffic including AI sources with UTM parameters. Use for: utm источники, utm_source, tagged traffic, платный трафик, ChatGPT referral with UTM, campaign sources.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "UTMSourceRecord": {
+            "properties": {
+              "source": {
+                "default": "",
+                "title": "Source",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Percent"
+              }
+            },
+            "title": "UTMSourceRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "ai_utm_visits": {
+            "default": 0,
+            "title": "Ai Utm Visits",
+            "type": "integer"
+          },
+          "utm_sources": {
+            "items": {
+              "$ref": "#/$defs/UTMSourceRecord"
+            },
+            "title": "Utm Sources",
+            "type": "array"
+          }
+        },
+        "title": "UTMSourcesResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "regions",
+      "description": "Visitor breakdown by city and region.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "device_brands",
+      "description": "Phone and tablet brands (Apple, Samsung, etc.).",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "browsers",
+      "description": "Browser breakdown (Chrome, Firefox, Safari, Edge, Opera) AND OS breakdown (Windows, macOS, Linux, Android, iOS). Use for: сравни браузеры, какие браузеры используют, Chrome vs Safari, browser compatibility, ОС пользователей, работает ли на всех браузерах.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "search_engines",
+      "description": "Which search engines send organic traffic.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "organic_keywords",
+      "description": "Organic search keywords (may show 'not provided' if encrypted).",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "campaigns",
+      "description": "UTM campaign performance.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "social_networks",
+      "description": "Social network traffic breakdown.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "referring_sites",
+      "description": "Referral websites sending visitors.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "site_search",
+      "description": "Internal site search terms including zero-result queries.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "new_vs_returning",
+      "description": "New visitors vs returning visitors ratio and counts. Use for: новые vs возвращающиеся, лояльность аудитории, сколько новых пользователей, retention, returning users percentage.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "visit_duration",
+      "description": "Session duration distribution buckets.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "languages",
+      "description": "Visitor browser language preferences.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "providers",
+      "description": "ISP and network providers of visitors.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "screen_resolutions",
+      "description": "Screen resolution distribution: 1920x1080, 1366x768, mobile resolutions, etc. Use for: разрешения экранов, с каких экранов заходят, 1080p vs 720p, мобильные разрешения, screen size breakdown.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "page_details",
+      "description": "All pages with time-on-page, bounce rate, and avg actions.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "outlinks",
+      "description": "Outbound link clicks tracked by Matomo.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "full_report",
+      "description": "Fetch ALL analytics data in one call — traffic, geo, devices, referrers, engagement, AI referrers, audience. Runs in background, result delivered to chat.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "_AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "title": "AnalyticsScalarResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": true,
+      "long_running": false,
       "scopes": [],
       "owner_chat_tool": "analytics"
     }
@@ -1118,7 +2583,7 @@
     }
   ],
   "required_scopes": [],
-  "icon_size_bytes": 317,
+  "icon_size_bytes": 389,
   "exposed": [
     {
       "name": "traffic",
@@ -1137,6 +2602,14 @@
       "action_type": "read"
     },
     {
+      "name": "ai_referrers",
+      "action_type": "read"
+    },
+    {
+      "name": "matomo_config",
+      "action_type": "read"
+    },
+    {
       "name": "real_time",
       "action_type": "read"
     },
@@ -1163,10 +2636,6 @@
     {
       "name": "full_report",
       "action_type": "read"
-    },
-    {
-      "name": "ai_referrers",
-      "action_type": "read"
     }
   ],
   "lifecycle": {
@@ -1180,5 +2649,25 @@
       "signature": "(ctx)"
     }
   },
+  "panels": [
+    {
+      "panel_id": "sidebar",
+      "slot": "left",
+      "title": "Analytics",
+      "tree": {}
+    },
+    {
+      "panel_id": "workspace",
+      "slot": "right",
+      "title": "Analytics",
+      "tree": {}
+    },
+    {
+      "panel_id": "analytics_hub",
+      "slot": "center",
+      "title": "Analytics Dashboard",
+      "tree": {}
+    }
+  ],
   "category": "marketing"
 }
