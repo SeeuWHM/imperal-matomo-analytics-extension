@@ -11,6 +11,15 @@ TIMEOUT = 30
 HEAVY_TIMEOUT = 90  # full-report, daily-report: MOS runs 22 parallel Matomo calls
 
 
+def _normalize_backend_url(raw: str) -> str:
+    value = (raw or "").strip()
+    if not value:
+        return ""
+    if not value.startswith(("http://", "https://")):
+        value = f"https://{value}"
+    return value.rstrip("/")
+
+
 async def call_mos(ctx, endpoint: str, extra: dict | None = None, timeout: int = TIMEOUT) -> dict:
     """POST to the MOS server. Auto-injects the user's Matomo creds."""
     s = await load_settings(ctx)
@@ -18,6 +27,10 @@ async def call_mos(ctx, endpoint: str, extra: dict | None = None, timeout: int =
     if not matomo_ready(s):
         return {"error": "Matomo not configured - open Settings and add your URL + Auth Token.",
                 "_config": True}
+
+    base_url = _normalize_backend_url(SERVER_URL)
+    if not base_url:
+        return {"error": "Analytics backend URL is not configured.", "_config": True}
 
     payload = {
         "matomo_url":        s["matomo_url"],
@@ -29,7 +42,7 @@ async def call_mos(ctx, endpoint: str, extra: dict | None = None, timeout: int =
     }
 
     resp = await ctx.http.post(
-        f"{SERVER_URL.rstrip('/')}{endpoint}",
+        f"{base_url}{endpoint}",
         json=payload,
         headers={"X-API-Key": SERVER_API_KEY},
         timeout=timeout,
