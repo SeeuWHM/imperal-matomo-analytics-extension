@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from app import chat, ext, save_result
 from api_client import call_mos
 from params import _DATE_HELP, _PERIOD_HELP
+from response_models import LiveVisitorsResponse, BreakdownResponse, AnalyticsScalarResponse
 
 
 class _EmptyParams(BaseModel):
@@ -28,7 +29,7 @@ def _err(data: dict) -> ActionResult:
                description="Live active visitors right now: 30 min / 60 min / 3 hour windows. "
                            "Use for: сколько людей сейчас на сайте, онлайн посетители, "
                            "live visitors, real-time, кто сейчас.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=LiveVisitorsResponse)
 async def fn_real_time(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_real_time."""
     data = await call_mos(ctx, "/api/analytics/real-time", {})
@@ -56,7 +57,7 @@ async def fn_real_time(ctx, params: _EmptyParams) -> ActionResult:
                            "источники трафика, откуда приходят люди, топ источников, "
                            "прямые переходы, реферальные ссылки, поисковый трафик, "
                            "direct vs organic, where does traffic come from, traffic sources.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=LiveVisitorsResponse)
 async def fn_sources(ctx, params: _PeriodParams) -> ActionResult:
     """Handler: fn_sources."""
     data = await call_mos(ctx, "/api/analytics/sources", {
@@ -86,7 +87,7 @@ async def fn_sources(ctx, params: _PeriodParams) -> ActionResult:
                description="Device type split: Desktop vs Smartphone vs Tablet percentages. "
                            "Use for: с каких устройств, мобильные vs десктоп, "
                            "mobile traffic share, сколько с телефона, desktop percentage.",
-               action_type="read")
+               action_type="read", data_model=BreakdownResponse)
 async def fn_devices(ctx, params: _PeriodParams) -> ActionResult:
     """Return device type breakdown."""
     data = await call_mos(ctx, "/api/analytics/devices", {
@@ -105,7 +106,7 @@ async def fn_devices(ctx, params: _PeriodParams) -> ActionResult:
                description="Top countries by visitor count with percentages. "
                            "Use for: из каких стран, топ страны, география трафика, "
                            "откуда люди, США Индия Китай, country breakdown, where visitors come from.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=LiveVisitorsResponse)
 async def fn_geo(ctx, params: _PeriodParams) -> ActionResult:
     """Handler: fn_geo."""
     data = await call_mos(ctx, "/api/analytics/geo", {
@@ -135,7 +136,7 @@ async def fn_geo(ctx, params: _PeriodParams) -> ActionResult:
                description="Top landing pages (where sessions start) + top exit pages (where visitors leave). "
                            "Use for: где люди выходят, на каких страницах уходят, exit pages, "
                            "точки входа, landing pages, корзина теряет людей, где теряем посетителей.",
-               action_type="read")
+               action_type="read", data_model=AnalyticsScalarResponse)
 async def fn_entry_exit(ctx, params: _PeriodParams) -> ActionResult:
     """Return entry and exit page rankings."""
     data = await call_mos(ctx, "/api/analytics/entry-exit", {

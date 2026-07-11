@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from app import chat, ext, save_result, load_settings
 from api_client import call_mos, HEAVY_TIMEOUT
 from params import _DATE_HELP, _PERIOD_HELP
+from response_models import InsightsResponse, DailyReportResponse, AlertListResponse, AnalyticsScalarResponse
 
 
 class _EmptyParams(BaseModel):
@@ -49,7 +50,8 @@ def _insights_ui(data: dict):
                            "Use for: что нужно исправить, аномалии, проблемы с сайтом, "
                            "что плохо работает, что делать, где теряем трафик, recommendations.",
                action_type="read",
-               event="analytics.action.result")
+               event="analytics.action.result",
+               data_model=InsightsResponse)
 async def fn_insights(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_insights."""
     data = await call_mos(ctx, "/api/analytics/insights", {})
@@ -69,7 +71,8 @@ async def fn_insights(ctx, params: _EmptyParams) -> ActionResult:
                description="Daily traffic brief with AI narration. USES AI TOKENS. Runs in background — result auto-delivered to chat when done.",
                action_type="read",
                event="analytics.action.result",
-               background=True, long_running=True)
+               background=True, long_running=True,
+               data_model=DailyReportResponse)
 async def fn_daily_report(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_daily_report."""
     await ctx.progress(10, "Fetching traffic data...")
@@ -128,7 +131,8 @@ async def fn_daily_report(ctx, params: _EmptyParams) -> ActionResult:
 @chat.function("anomaly_check",
                description="Spot anomalies against the last 7 days. Free (no AI tokens).",
                action_type="read",
-               event="analytics.action.result")
+               event="analytics.action.result",
+               data_model=AlertListResponse)
 async def fn_anomaly_check(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_anomaly_check."""
     data = await call_mos(ctx, "/api/analytics/insights", {})
@@ -190,7 +194,7 @@ async def ipc_daily_summary(ctx) -> ActionResult:
                    "blog traffic, which articles perform best, блог статистика, "
                    "blog.webhostmost.com, контент который читают."
                ),
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=AnalyticsScalarResponse)
 async def fn_blog_analytics(ctx, params: _BlogParams) -> ActionResult:
     """Handler: fn_blog_analytics."""
     s = await load_settings(ctx)

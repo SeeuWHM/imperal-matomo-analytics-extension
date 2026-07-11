@@ -9,6 +9,7 @@ from imperal_sdk.types import ActionResult
 from app import chat, save_result, load_settings, matomo_ready
 from api_client import call_mos
 from params import TrafficParams, TopPagesParams, TrendsParams
+from response_models import TrafficOverviewRecord, PageListResponse, TrendSummaryResponse
 
 
 def _err(data: dict) -> ActionResult:
@@ -23,6 +24,7 @@ def _err(data: dict) -> ActionResult:
                 "Use for: покажи трафик, сколько посетителей, визиты за период, "
                 "pageviews, сводка по трафику, traffic overview, how many visitors.",
     action_type="read",
+    data_model=TrafficOverviewRecord,
 )
 async def fn_traffic(ctx, params: TrafficParams) -> ActionResult:
     """Return visits/pageviews summary from Matomo for the requested period."""
@@ -45,6 +47,7 @@ async def fn_traffic(ctx, params: TrafficParams) -> ActionResult:
                 "most popular content, best performing pages, top content.",
     action_type="read",
     event="analytics.action.result",
+    data_model=PageListResponse,
 )
 async def fn_top_pages(ctx, params: TopPagesParams) -> ActionResult:
     """Return the N most visited pages for the chosen period and segment."""
@@ -82,6 +85,7 @@ async def fn_top_pages(ctx, params: TopPagesParams) -> ActionResult:
                 "week over week, растёт ли сайт, динамика трафика, трафик вверх или вниз.",
     action_type="read",
     event="analytics.action.result",
+    data_model=TrendSummaryResponse,
 )
 async def fn_trends(ctx, params: TrendsParams) -> ActionResult:
     """Return week-over-week visits and the % change, plus up/down direction."""

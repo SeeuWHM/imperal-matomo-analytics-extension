@@ -16,6 +16,7 @@ from imperal_sdk.types import ActionResult
 from app import chat, ext, save_result
 from api_client import call_mos, HEAVY_TIMEOUT
 from params import _DATE_HELP, _PERIOD_HELP
+from response_models import AIReferrersResponse, ConversionsResponse, EventsResponse, UTMSourcesResponse, BreakdownResponse, AnalyticsScalarResponse
 
 
 # ─── Shared params model ──────────────────────────────────────────────────────
@@ -79,7 +80,7 @@ def _top(items: list[dict]) -> tuple[str, float]:
                    "Use for: с каких нейросетей трафик, ChatGPT traffic, AI referrers, "
                    "нейронки шлют трафик, which AI sends visitors, LLM traffic."
                ),
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=AIReferrersResponse)
 async def fn_ai_referrers(ctx, params: _AIReferrersParams) -> ActionResult:
     """Handler: fn_ai_referrers."""
     data = await call_mos(ctx, "/api/analytics/ai-referrers", {
@@ -122,7 +123,7 @@ async def fn_ai_referrers(ctx, params: _AIReferrersParams) -> ActionResult:
                    "conversion rate. Use for: конверсии, покупки, заказы, сколько купили, "
                    "checkout, воронка продаж, purchase funnel, how many orders."
                ),
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=ConversionsResponse)
 async def fn_conversions(ctx, params: _ConversionsParams) -> ActionResult:
     """Handler: fn_conversions."""
     data = await call_mos(ctx, "/api/analytics/conversions", {
@@ -179,7 +180,7 @@ async def fn_conversions(ctx, params: _ConversionsParams) -> ActionResult:
                    "(begin_checkout). Use for: события, события аналитики, engagement events, "
                    "scroll depth, ecommerce events, what is being tracked."
                ),
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=EventsResponse)
 async def fn_events(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_events."""
     data = await call_mos(ctx, "/api/analytics/events", {
@@ -225,7 +226,7 @@ async def fn_events(ctx, params: _AudienceParams) -> ActionResult:
                    "Use for: utm источники, utm_source, tagged traffic, платный трафик, "
                    "ChatGPT referral with UTM, campaign sources."
                ),
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=UTMSourcesResponse)
 async def fn_utm_sources(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_utm_sources."""
     data = await call_mos(ctx, "/api/analytics/utm-sources", {
@@ -270,7 +271,7 @@ async def fn_utm_sources(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("regions",
                description="Visitor breakdown by city and region.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_regions(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_regions."""
     data = await call_mos(ctx, "/api/analytics/regions", {
@@ -292,7 +293,7 @@ async def fn_regions(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("device_brands",
                description="Phone and tablet brands (Apple, Samsung, etc.).",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_device_brands(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_device_brands."""
     data = await call_mos(ctx, "/api/analytics/brands", {
@@ -317,7 +318,7 @@ async def fn_device_brands(ctx, params: _AudienceParams) -> ActionResult:
                            "(Windows, macOS, Linux, Android, iOS). "
                            "Use for: сравни браузеры, какие браузеры используют, Chrome vs Safari, "
                            "browser compatibility, ОС пользователей, работает ли на всех браузерах.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_browsers(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_browsers."""
     data = await call_mos(ctx, "/api/analytics/browsers", {
@@ -343,7 +344,7 @@ async def fn_browsers(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("search_engines",
                description="Which search engines send organic traffic.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_search_engines(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_search_engines."""
     data = await call_mos(ctx, "/api/analytics/search-engines", {
@@ -365,7 +366,7 @@ async def fn_search_engines(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("organic_keywords",
                description="Organic search keywords (may show 'not provided' if encrypted).",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_organic_keywords(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_organic_keywords."""
     data = await call_mos(ctx, "/api/analytics/keywords", {
@@ -387,7 +388,7 @@ async def fn_organic_keywords(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("campaigns",
                description="UTM campaign performance.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_campaigns(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_campaigns."""
     data = await call_mos(ctx, "/api/analytics/campaigns", {
@@ -409,7 +410,7 @@ async def fn_campaigns(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("social_networks",
                description="Social network traffic breakdown.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_social_networks(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_social_networks."""
     data = await call_mos(ctx, "/api/analytics/socials", {
@@ -431,7 +432,7 @@ async def fn_social_networks(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("referring_sites",
                description="Referral websites sending visitors.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_referring_sites(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_referring_sites."""
     data = await call_mos(ctx, "/api/analytics/referring-sites", {
@@ -453,7 +454,7 @@ async def fn_referring_sites(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("site_search",
                description="Internal site search terms including zero-result queries.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_site_search(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_site_search."""
     data = await call_mos(ctx, "/api/analytics/site-search", {
@@ -481,7 +482,7 @@ async def fn_site_search(ctx, params: _AudienceParams) -> ActionResult:
                description="New visitors vs returning visitors ratio and counts. "
                            "Use for: новые vs возвращающиеся, лояльность аудитории, "
                            "сколько новых пользователей, retention, returning users percentage.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_new_vs_returning(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_new_vs_returning."""
     data = await call_mos(ctx, "/api/analytics/new-returning", {
@@ -508,7 +509,7 @@ async def fn_new_vs_returning(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("visit_duration",
                description="Session duration distribution buckets.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_visit_duration(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_visit_duration."""
     data = await call_mos(ctx, "/api/analytics/visit-duration", {
@@ -530,7 +531,7 @@ async def fn_visit_duration(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("languages",
                description="Visitor browser language preferences.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_languages(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_languages."""
     data = await call_mos(ctx, "/api/analytics/languages", {
@@ -552,7 +553,7 @@ async def fn_languages(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("providers",
                description="ISP and network providers of visitors.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_providers(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_providers."""
     data = await call_mos(ctx, "/api/analytics/providers", {
@@ -576,7 +577,7 @@ async def fn_providers(ctx, params: _AudienceParams) -> ActionResult:
                description="Screen resolution distribution: 1920x1080, 1366x768, mobile resolutions, etc. "
                            "Use for: разрешения экранов, с каких экранов заходят, "
                            "1080p vs 720p, мобильные разрешения, screen size breakdown.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_screen_resolutions(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_screen_resolutions."""
     data = await call_mos(ctx, "/api/analytics/resolutions", {
@@ -598,7 +599,7 @@ async def fn_screen_resolutions(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("page_details",
                description="All pages with time-on-page, bounce rate, and avg actions.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_page_details(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_page_details."""
     data = await call_mos(ctx, "/api/analytics/page-details", {
@@ -638,7 +639,7 @@ async def fn_page_details(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("outlinks",
                description="Outbound link clicks tracked by Matomo.",
-               action_type="read", event="analytics.action.result")
+               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_outlinks(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_outlinks."""
     data = await call_mos(ctx, "/api/analytics/outlinks", {
@@ -661,7 +662,7 @@ async def fn_outlinks(ctx, params: _AudienceParams) -> ActionResult:
 @chat.function("full_report",
                description="Fetch ALL analytics data in one call — traffic, geo, devices, referrers, engagement, AI referrers, audience. Runs in background, result delivered to chat.",
                action_type="read", event="analytics.action.result",
-               background=True, long_running=False)
+               background=True, long_running=False, data_model=AnalyticsScalarResponse)
 async def fn_full_report(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_full_report."""
     await ctx.progress(10, "Fetching all analytics data from Matomo...")
