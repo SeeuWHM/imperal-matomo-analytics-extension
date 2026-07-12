@@ -175,13 +175,8 @@ def _render_result_body(action: str, data: dict) -> ui.UINode:
         if os_items:
             parts += [ui.Divider(), breakdown_table(os_items, "OS")]
         return ui.Stack(children=parts)
-    if action == "brands":
-        items = data.get("brands") or []
-        models = data.get("models") or []
-        parts: list = [breakdown_table(items, "Device brand")]
-        if models:
-            parts += [ui.Divider(), breakdown_table(models, "Model")]
-        return ui.Stack(children=parts)
+    if action in ("brands", "device_brands"):
+        return breakdown_table(data.get("brands") or [], "Device brand")
     if action == "languages":
         return breakdown_table(data.get("languages") or [], "Language")
     if action == "providers":
@@ -200,31 +195,39 @@ def _render_result_body(action: str, data: dict) -> ui.UINode:
     if action == "visit_duration":
         return breakdown_table(data.get("buckets") or [], "Session duration")
     if action == "regions":
-        parts: list = []
-        cities = data.get("cities") or []
-        regions = data.get("regions") or []
-        if cities:
-            parts.append(breakdown_table(cities, "City"))
-        if regions:
-            if parts:
-                parts.append(ui.Divider())
-            parts.append(breakdown_table(regions, "Region"))
-        return ui.Stack(children=parts) if parts else ui.Empty(message="No region data")
+        return breakdown_table(data.get("regions") or [], "Region")
     if action == "entry_exit":
-        entries = data.get("entries") or []
-        exits   = data.get("exits") or []
+        entries = data.get("entry_pages") or []
+        exits   = data.get("exit_pages") or []
         parts: list = []
         if entries:
-            parts.append(breakdown_table(entries, "Entry page"))
+            parts.append(ui.Text(content="Entry pages", variant="caption"))
+            parts.append(entry_exit_table(entries, "visits", "Visits"))
         if exits:
             if parts:
                 parts.append(ui.Divider())
-            parts.append(breakdown_table(exits, "Exit page"))
+            parts.append(ui.Text(content="Exit pages", variant="caption"))
+            parts.append(entry_exit_table(exits, "visits", "Visits"))
         return ui.Stack(children=parts) if parts else ui.Empty(message="No entry/exit data")
     if action in ("search_engines", "search-engines"):
         return breakdown_table(data.get("search_engines") or [], "Search engine")
     if action in ("referring_sites", "referring-sites"):
-        return breakdown_table(data.get("sites") or [], "Referring site")
+        return breakdown_table(data.get("referring_sites") or [], "Referring site")
+    if action in ("organic_keywords",):
+        return breakdown_table(data.get("keywords") or [], "Keyword")
+    if action == "campaigns":
+        return breakdown_table(data.get("campaigns") or [], "Campaign")
+    if action in ("social_networks",):
+        return breakdown_table(data.get("socials") or [], "Network")
+    if action == "site_search":
+        keywords = data.get("keywords") or []
+        no_results = data.get("no_results") or []
+        parts = [breakdown_table(keywords, "Search term")]
+        if no_results:
+            parts += [ui.Divider(), breakdown_table(no_results, "No-result term")]
+        return ui.Stack(children=parts)
+    if action == "outlinks":
+        return breakdown_table(data.get("outlinks") or [], "Outbound URL")
     if action == "page_details":
         pages = data.get("pages") or []
         rows = [
@@ -262,12 +265,39 @@ def result_zone(result_doc: dict | None) -> ui.UINode:
     return ui.Section(title=f"↳ {title}", children=[body])
 
 
-def _masked(value: str) -> str:
-    if not value:
-        return ""
-    if len(value) <= 8:
-        return "••••"
-    return "••••" + value[-4:]
+def sites_list(s: dict) -> ui.UINode:
+    """Manage which Matomo site_ids are tracked as named projects."""
+    sites = s.get("sites") or []
+    rows = [{"label": site.get("label", "-"), "site_id": str(site.get("site_id", "-"))}
+            for site in sites]
+    table = ui.DataTable(
+        columns=[
+            ui.DataColumn(key="label", label="Site / project", width="60%"),
+            ui.DataColumn(key="site_id", label="Matomo site_id", width="40%"),
+        ],
+        rows=rows,
+    ) if rows else ui.Empty(message="No sites yet - add one below.")
+
+    add_form = ui.Form(
+        action="add_site",
+        submit_label="Add site",
+        children=[
+            ui.Input(placeholder="Label - e.g. Main Website, Blog, Docs", param_name="label"),
+            ui.Input(placeholder="Matomo site_id - e.g. 1", param_name="site_id"),
+        ],
+    )
+    remove_form = ui.Form(
+        action="remove_site",
+        submit_label="Remove site",
+        children=[
+            ui.Input(placeholder="Label to remove", param_name="label"),
+        ],
+    ) if rows else None
+
+    children = [table, add_form]
+    if remove_form:
+        children.append(remove_form)
+    return ui.Stack(children=children)
 
 
 def settings_form(s: dict) -> ui.UINode:
@@ -279,30 +309,23 @@ def settings_form(s: dict) -> ui.UINode:
         action="save_settings",
         submit_label="Save settings",
         children=[
-            ui.Input(placeholder="Matomo URL - https://analytics.example.com",
-                     value=s.get("matomo_url", ""), param_name="matomo_url"),
-            ui.Input(
-                placeholder=(f"Auth Token - current {_masked(s.get('matomo_token', ''))}"
-                             if s.get("matomo_token") else "Matomo Auth Token"),
-                value="", param_name="matomo_token",
-            ),
-            ui.Input(placeholder="Site ID - e.g. 1",
-                     value=str(s.get("matomo_site_id", 1)), param_name="matomo_site_id"),
             ui.Input(placeholder="Segment (optional) - pageUrl=^https://blog.example.com",
                      value=s.get("matomo_segment", ""), param_name="matomo_segment"),
-            ui.Input(placeholder="Blog URL (optional) - https://blog.example.com",
-                     value=s.get("blog_url", ""), param_name="blog_url"),
-            ui.Input(placeholder="Blog Site ID (optional) - if blog is a separate Matomo site, e.g. 2",
-                     value=str(s.get("blog_site_id") or ""), param_name="blog_site_id"),
             ui.Input(placeholder="UTM source Dimension ID (optional) - e.g. 8",
                      value=str(s.get("utm_source_dim_id") or ""), param_name="utm_source_dim_id"),
         ],
     )
     return ui.Stack(children=[
         status,
-        ui.Text(content=("Your Matomo URL and Auth Token are stored encrypted per-user. "
-                         "Our server bridge proxies the calls - we never persist your credentials."),
-                variant="caption"),
+        ui.Text(
+            content=("Matomo URL and Auth Token are entered in the platform's Secrets "
+                     "panel (not here) - they're stored in the platform's secrets vault, "
+                     "never in this extension's own data."),
+            variant="caption",
+        ),
+        ui.Divider(),
+        ui.Text(content="Sites / projects", variant="caption"),
+        sites_list(s),
         ui.Divider(),
         form,
         ui.Text(content="Leave a field blank to keep the current value.",

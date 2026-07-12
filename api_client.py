@@ -1,14 +1,16 @@
-"""HTTP client - calls our Marketing OS server.
+"""HTTP client - calls the shared backend bridge (matomo-analytics-api).
 
-Server URL and API key are baked-in constants (app.py). Only the user's
-Matomo credentials live in ctx.store.
+Backend URL is a baked-in constant (app.py) - not a secret, it's the public
+gateway host every extension on this platform calls. The user's Matomo URL +
+Auth Token live in ctx.secrets (EXT-SECRETS-V1); the backend itself doesn't
+check any auth header, so none is sent.
 """
 from __future__ import annotations
 
-from app import SERVER_URL, SERVER_API_KEY, load_settings, matomo_ready
+from app import SERVER_URL, load_settings, matomo_ready, resolve_site_id
 
 TIMEOUT = 30
-HEAVY_TIMEOUT = 90  # full-report, daily-report: MOS runs 22 parallel Matomo calls
+HEAVY_TIMEOUT = 90  # full-report, daily-report: backend runs ~24 parallel Matomo calls
 
 
 def _normalize_backend_url(raw: str) -> str:
@@ -20,8 +22,9 @@ def _normalize_backend_url(raw: str) -> str:
     return value.rstrip("/")
 
 
-async def call_mos(ctx, endpoint: str, extra: dict | None = None, timeout: int = TIMEOUT) -> dict:
-    """POST to the MOS server. Auto-injects the user's Matomo creds."""
+async def call_mos(ctx, endpoint: str, extra: dict | None = None, timeout: int = TIMEOUT, site: str = "") -> dict:
+    """POST to the backend bridge. Auto-injects the user's Matomo creds and
+    resolves `site` (a label from list_sites) to the matching Matomo site_id."""
     s = await load_settings(ctx)
 
     if not matomo_ready(s):
@@ -35,7 +38,7 @@ async def call_mos(ctx, endpoint: str, extra: dict | None = None, timeout: int =
     payload = {
         "matomo_url":        s["matomo_url"],
         "token":             s["matomo_token"],
-        "site_id":           int(s.get("matomo_site_id", 1) or 1),
+        "site_id":           resolve_site_id(s, site),
         "segment":           (s.get("matomo_segment") or None),
         "utm_source_dim_id": int(s.get("utm_source_dim_id") or 0),
         **(extra or {}),
@@ -44,7 +47,6 @@ async def call_mos(ctx, endpoint: str, extra: dict | None = None, timeout: int =
     resp = await ctx.http.post(
         f"{base_url}{endpoint}",
         json=payload,
-        headers={"X-API-Key": SERVER_API_KEY},
         timeout=timeout,
     )
     if not resp.ok:

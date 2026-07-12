@@ -1,10 +1,4 @@
-"""Chat functions for audience, channel, and engagement analytics.
-
-All new endpoints introduced in analytics_audience on the MOS server:
-regions, brands, browsers, search-engines, keywords, campaigns, socials,
-referring-sites, site-search, new-returning, visit-duration, languages,
-providers, resolutions, page-details, outlinks, full-report.
-"""
+"""Chat functions for audience, channel, and engagement analytics."""
 # No `from __future__ import annotations` - V6 validator needs real annotations.
 
 from typing import Union
@@ -15,8 +9,12 @@ from imperal_sdk.types import ActionResult
 
 from app import chat, ext, save_result
 from api_client import call_mos, HEAVY_TIMEOUT
-from params import _DATE_HELP, _PERIOD_HELP
-from response_models import AIReferrersResponse, ConversionsResponse, EventsResponse, UTMSourcesResponse, BreakdownResponse, AnalyticsScalarResponse
+from params import _DATE_HELP, _PERIOD_HELP, _SITE_HELP
+from response_models import (
+    AIReferrersResponse, ConversionsResponse, EventsResponse, UTMSourcesResponse,
+    BreakdownResponse, AnalyticsScalarResponse, NewReturningResponse,
+    SiteSearchResponse, BrowsersResponse,
+)
 
 
 # ─── Shared params model ──────────────────────────────────────────────────────
@@ -25,16 +23,19 @@ class _AudienceParams(BaseModel):
     period: str = Field(default="week", description=_PERIOD_HELP)
     date: str   = Field(default="today", description=_DATE_HELP)
     limit: int  = Field(default=20, ge=1, le=100)
+    site: str   = Field(default="", description=_SITE_HELP)
 
 
 class _AIReferrersParams(BaseModel):
     period: str = Field(default="month", description=_PERIOD_HELP)
     date: str   = Field(default="today", description=_DATE_HELP)
+    site: str   = Field(default="", description=_SITE_HELP)
 
 
 class _ConversionsParams(BaseModel):
     period: str = Field(default="month", description=_PERIOD_HELP)
     date: str   = Field(default="today", description=_DATE_HELP)
+    site: str   = Field(default="", description=_SITE_HELP)
 
 
 # ─── Error helper ─────────────────────────────────────────────────────────────
@@ -85,7 +86,7 @@ async def fn_ai_referrers(ctx, params: _AIReferrersParams) -> ActionResult:
     """Handler: fn_ai_referrers."""
     data = await call_mos(ctx, "/api/matomo-analytics/ai-referrers", {
         "period": params.period, "date": params.date,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "ai_referrers", "AI referrers", data)
@@ -128,7 +129,7 @@ async def fn_conversions(ctx, params: _ConversionsParams) -> ActionResult:
     """Handler: fn_conversions."""
     data = await call_mos(ctx, "/api/matomo-analytics/conversions", {
         "period": params.period, "date": params.date,
-    })
+    }, site=params.site)
     if "error" in data:
         return ActionResult.error(error=data.get("error", "unknown error"))
     await save_result(ctx, "conversions", "Conversions", data)
@@ -185,7 +186,7 @@ async def fn_events(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_events."""
     data = await call_mos(ctx, "/api/matomo-analytics/events", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return ActionResult.error(error=data.get("error", "unknown error"))
     await save_result(ctx, "events", "Events", data)
@@ -231,7 +232,7 @@ async def fn_utm_sources(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_utm_sources."""
     data = await call_mos(ctx, "/api/matomo-analytics/utm-sources", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return ActionResult.error(error=data.get("error", "unknown error"))
     await save_result(ctx, "utm_sources", "UTM Sources", data)
@@ -276,7 +277,7 @@ async def fn_regions(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_regions."""
     data = await call_mos(ctx, "/api/matomo-analytics/regions", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "regions", "Regions", data)
@@ -298,7 +299,7 @@ async def fn_device_brands(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_device_brands."""
     data = await call_mos(ctx, "/api/matomo-analytics/brands", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "device_brands", "Device brands", data)
@@ -318,12 +319,12 @@ async def fn_device_brands(ctx, params: _AudienceParams) -> ActionResult:
                            "(Windows, macOS, Linux, Android, iOS). "
                            "Use for: сравни браузеры, какие браузеры используют, Chrome vs Safari, "
                            "browser compatibility, ОС пользователей, работает ли на всех браузерах.",
-               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
+               action_type="read", event="analytics.action.result", data_model=BrowsersResponse)
 async def fn_browsers(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_browsers."""
     data = await call_mos(ctx, "/api/matomo-analytics/browsers", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "browsers", "Browsers & OS", data)
@@ -349,7 +350,7 @@ async def fn_search_engines(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_search_engines."""
     data = await call_mos(ctx, "/api/matomo-analytics/search-engines", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "search_engines", "Search engines", data)
@@ -371,7 +372,7 @@ async def fn_organic_keywords(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_organic_keywords."""
     data = await call_mos(ctx, "/api/matomo-analytics/keywords", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "organic_keywords", "Organic keywords", data)
@@ -393,7 +394,7 @@ async def fn_campaigns(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_campaigns."""
     data = await call_mos(ctx, "/api/matomo-analytics/campaigns", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "campaigns", "Campaigns", data)
@@ -415,7 +416,7 @@ async def fn_social_networks(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_social_networks."""
     data = await call_mos(ctx, "/api/matomo-analytics/socials", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "social_networks", "Social networks", data)
@@ -437,7 +438,7 @@ async def fn_referring_sites(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_referring_sites."""
     data = await call_mos(ctx, "/api/matomo-analytics/referring-sites", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "referring_sites", "Referring sites", data)
@@ -454,12 +455,12 @@ async def fn_referring_sites(ctx, params: _AudienceParams) -> ActionResult:
 
 @chat.function("site_search",
                description="Internal site search terms including zero-result queries.",
-               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
+               action_type="read", event="analytics.action.result", data_model=SiteSearchResponse)
 async def fn_site_search(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_site_search."""
     data = await call_mos(ctx, "/api/matomo-analytics/site-search", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "site_search", "Site search", data)
@@ -482,12 +483,12 @@ async def fn_site_search(ctx, params: _AudienceParams) -> ActionResult:
                description="New visitors vs returning visitors ratio and counts. "
                            "Use for: новые vs возвращающиеся, лояльность аудитории, "
                            "сколько новых пользователей, retention, returning users percentage.",
-               action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
+               action_type="read", event="analytics.action.result", data_model=NewReturningResponse)
 async def fn_new_vs_returning(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_new_vs_returning."""
     data = await call_mos(ctx, "/api/matomo-analytics/new-returning", {
         "period": params.period, "date": params.date,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "new_vs_returning", "New vs returning", data)
@@ -514,7 +515,7 @@ async def fn_visit_duration(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_visit_duration."""
     data = await call_mos(ctx, "/api/matomo-analytics/visit-duration", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "visit_duration", "Visit duration", data)
@@ -536,7 +537,7 @@ async def fn_languages(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_languages."""
     data = await call_mos(ctx, "/api/matomo-analytics/languages", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "languages", "Languages", data)
@@ -558,7 +559,7 @@ async def fn_providers(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_providers."""
     data = await call_mos(ctx, "/api/matomo-analytics/providers", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "providers", "Providers", data)
@@ -582,7 +583,7 @@ async def fn_screen_resolutions(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_screen_resolutions."""
     data = await call_mos(ctx, "/api/matomo-analytics/resolutions", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "screen_resolutions", "Screen resolutions", data)
@@ -604,7 +605,7 @@ async def fn_page_details(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_page_details."""
     data = await call_mos(ctx, "/api/matomo-analytics/page-details", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "page_details", "Page details", data)
@@ -644,7 +645,7 @@ async def fn_outlinks(ctx, params: _AudienceParams) -> ActionResult:
     """Handler: fn_outlinks."""
     data = await call_mos(ctx, "/api/matomo-analytics/outlinks", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    })
+    }, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "outlinks", "Outlinks", data)
@@ -668,7 +669,7 @@ async def fn_full_report(ctx, params: _AudienceParams) -> ActionResult:
     await ctx.progress(10, "Fetching all analytics data from Matomo...")
     data = await call_mos(ctx, "/api/matomo-analytics/full-report", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    }, timeout=HEAVY_TIMEOUT)
+    }, timeout=HEAVY_TIMEOUT, site=params.site)
     if "error" in data:
         return _err(data)
     await ctx.progress(75, "Processing results...")
@@ -732,11 +733,11 @@ async def fn_full_report(ctx, params: _AudienceParams) -> ActionResult:
 
 @ext.expose("full_report")
 async def ipc_full_report(ctx, period: str = "week", date: str = "today",
-                          limit: int = 20) -> ActionResult:
+                          limit: int = 20, site: str = "") -> ActionResult:
     """Handler: ipc_full_report."""
     data = await call_mos(ctx, "/api/matomo-analytics/full-report", {
         "period": period, "date": date, "limit": limit,
-    })
+    }, site=site)
     if "error" in data:
         return ActionResult.error(error=data.get("error", "unknown error"))
     return ActionResult.success(data=data)

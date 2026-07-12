@@ -1,6 +1,6 @@
 """
-Webbee stress-tester — deploys on VPS, hammers both extensions with
-realistic user prompts and logs pass/fail/error for each.
+Webbee stress-tester — deploys on VPS, hammers the Matomo Analytics Connector
+with realistic user prompts and logs pass/fail/error for each.
 
 Usage:
     python test_webbee_agent.py --session <cookie_file> [--rounds N]
@@ -22,7 +22,6 @@ except ImportError:
 
 
 ANALYTICS_URL = "https://panel.imperal.io/ext/analytics"
-WP_BLOGGER_URL = "https://panel.imperal.io/ext/wp-blogger"
 WAIT_FOR_RESPONSE_S = 30  # max seconds to wait for Webbee reply
 
 ANALYTICS_PROMPTS = [
@@ -41,23 +40,9 @@ ANALYTICS_PROMPTS = [
     "топ источников трафика",
     "какие страницы лучше всего работают",
     "покажи статистику за сегодня",
-]
-
-WP_BLOGGER_PROMPTS = [
-    "покажи мои позиции в Google",
-    "покажи контент план",
-    "сколько статей в работе",
-    "найди ключевые слова для темы 'VPS хостинг'",
-    "покажи GSC отчет — клики из Google",
-    "что растет в органике",
-    "что падает в позициях",
-    "создай контент план для блога",
-    "покажи опубликованные посты в WordPress",
-    "покажи статьи на ревью",
-    "найди пробелы в ключевых словах по сравнению с конкурентами",
-    "какой у нас SEO volume",
-    "покажи органический трафик из GSC",
-    "есть ли аномалии трафика в Google Search Console",
+    "какие сайты подключены",
+    "покажи конверсии за неделю",
+    "новые vs возвращающиеся посетители",
 ]
 
 
@@ -162,7 +147,7 @@ async def main(cookie_file: str | None, rounds: int):
         context = await browser.new_context(**ctx_args)
         page = await context.new_page()
 
-        all_results = {"analytics": [], "wp_blogger": []}
+        all_results = {"analytics": []}
 
         for round_n in range(1, rounds + 1):
             print(f"\n{'#'*60}")
@@ -170,14 +155,10 @@ async def main(cookie_file: str | None, rounds: int):
             print(f"{'#'*60}")
 
             r_analytics = await run_extension_test(
-                page, ANALYTICS_URL, ANALYTICS_PROMPTS, "Matomo Analytics"
-            )
-            r_wpb = await run_extension_test(
-                page, WP_BLOGGER_URL, WP_BLOGGER_PROMPTS, "WP Blogger"
+                page, ANALYTICS_URL, ANALYTICS_PROMPTS, "Matomo Analytics Connector"
             )
 
             all_results["analytics"].extend(r_analytics)
-            all_results["wp_blogger"].extend(r_wpb)
 
         await browser.close()
 

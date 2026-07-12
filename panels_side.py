@@ -132,10 +132,10 @@ async def workspace_panel(ctx):
                    children=[breakdown_table(countries, "Country")]),
         ui.Section(title="Entry pages (landing)", collapsible=True,
                    children=[entry_exit_table(ee.get("entry_pages") or [],
-                                              "entrances", "Entrances")]),
+                                              "visits", "Entrances")]),
         ui.Section(title="Exit pages", collapsible=True,
                    children=[entry_exit_table(ee.get("exit_pages") or [],
-                                              "exits", "Exits")]),
+                                              "visits", "Exits")]),
         ui.Section(title="Settings", collapsible=True,
                    children=[settings_form(s)]),
     ]

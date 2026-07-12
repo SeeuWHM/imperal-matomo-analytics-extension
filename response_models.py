@@ -109,6 +109,7 @@ class ConversionsResponse(BaseModel):
 
 class EventActionRecord(BaseModel):
     action: str = ""
+    events: int = 0
 
 
 class EventCategoryRecord(BaseModel):
@@ -123,9 +124,10 @@ class EventsResponse(BaseModel):
 
 
 class UTMSourceRecord(BaseModel):
-    source: str = ""
+    label: str = ""
     visits: int = 0
     percent: Optional[float] = None
+    is_ai: bool = False
 
 
 class UTMSourcesResponse(BaseModel):
@@ -135,3 +137,34 @@ class UTMSourcesResponse(BaseModel):
 
 class SimpleListResponse(BaseModel):
     items: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class EntryExitResponse(BaseModel):
+    entry_pages: list[PageMetricRecord] = Field(default_factory=list)
+    exit_pages: list[PageMetricRecord] = Field(default_factory=list)
+
+
+class NewReturningResponse(BaseModel):
+    new_visits: int = 0
+    returning_visits: int = 0
+    new_percent: float = 0.0
+    returning_percent: float = 0.0
+
+
+class SiteSearchResponse(BaseModel):
+    keywords: list[SimpleBreakdownRecord] = Field(default_factory=list)
+    no_results: list[SimpleBreakdownRecord] = Field(default_factory=list)
+
+
+class BrowsersResponse(BaseModel):
+    browsers: list[SimpleBreakdownRecord] = Field(default_factory=list)
+    os_families: list[SimpleBreakdownRecord] = Field(default_factory=list)
+
+
+class SiteEntry(BaseModel):
+    label: str = ""
+    site_id: int = 0
+
+
+class SitesListResponse(BaseModel):
+    sites: list[SiteEntry] = Field(default_factory=list)

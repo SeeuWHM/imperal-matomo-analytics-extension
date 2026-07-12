@@ -9,19 +9,14 @@ from imperal_sdk import ui
 from imperal_sdk.types import ActionResult
 from pydantic import BaseModel, Field
 
-from app import chat, ext, save_result, load_settings
+from app import chat, ext, save_result
 from api_client import call_mos, HEAVY_TIMEOUT
-from params import _DATE_HELP, _PERIOD_HELP
-from response_models import InsightsResponse, DailyReportResponse, AlertListResponse, AnalyticsScalarResponse
+from params import _SITE_HELP
+from response_models import InsightsResponse, DailyReportResponse, AlertListResponse
 
 
 class _EmptyParams(BaseModel):
-    pass
-
-
-class _BlogParams(BaseModel):
-    period: str = Field(default="month", description=_PERIOD_HELP)
-    date: str   = Field(default="today", description=_DATE_HELP)
+    site: str = Field(default="", description=_SITE_HELP)
 
 
 _SEV_TYPE = {"critical": "error", "warning": "warn", "info": "info"}
@@ -54,7 +49,7 @@ def _insights_ui(data: dict):
                data_model=InsightsResponse)
 async def fn_insights(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_insights."""
-    data = await call_mos(ctx, "/api/matomo-analytics/insights", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/insights", {}, site=params.site)
     if "error" in data:
         return _err(data)
     await save_result(ctx, "insights", "What to do", data)
@@ -77,10 +72,10 @@ async def fn_daily_report(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_daily_report."""
     await ctx.progress(10, "Fetching traffic data...")
     traffic, trends, top, insights = await asyncio.gather(
-        call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}),
-        call_mos(ctx, "/api/matomo-analytics/trends", {}),
-        call_mos(ctx, "/api/matomo-analytics/top-pages", {"period": "day", "date": "yesterday", "limit": 5}),
-        call_mos(ctx, "/api/matomo-analytics/insights", {}),
+        call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}, site=params.site),
+        call_mos(ctx, "/api/matomo-analytics/trends", {}, site=params.site),
+        call_mos(ctx, "/api/matomo-analytics/top-pages", {"period": "day", "date": "yesterday", "limit": 5}, site=params.site),
+        call_mos(ctx, "/api/matomo-analytics/insights", {}, site=params.site),
     )
     for d in (traffic, trends, top, insights):
         if "error" in d:
@@ -135,7 +130,7 @@ async def fn_daily_report(ctx, params: _EmptyParams) -> ActionResult:
                data_model=AlertListResponse)
 async def fn_anomaly_check(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_anomaly_check."""
-    data = await call_mos(ctx, "/api/matomo-analytics/insights", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/insights", {}, site=params.site)
     if "error" in data:
         return _err(data)
     alerts = [i for i in (data.get("insights") or [])
@@ -162,123 +157,23 @@ async def fn_anomaly_check(ctx, params: _EmptyParams) -> ActionResult:
 # ─── IPC - other extensions pull insights into their own reports ───
 
 @ext.expose("insights")
-async def ipc_insights(ctx) -> ActionResult:
+async def ipc_insights(ctx, site: str = "") -> ActionResult:
     """Handler: ipc_insights."""
-    data = await call_mos(ctx, "/api/matomo-analytics/insights", {})
+    data = await call_mos(ctx, "/api/matomo-analytics/insights", {}, site=site)
     if "error" in data:
         return _err(data)
     return ActionResult.success(data=data)
 
 
 @ext.expose("daily_summary")
-async def ipc_daily_summary(ctx) -> ActionResult:
+async def ipc_daily_summary(ctx, site: str = "") -> ActionResult:
     """IPC: raw facts only (no AI). For aggregators like imperal-reports."""
-    traffic = await call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"})
-    trends = await call_mos(ctx, "/api/matomo-analytics/trends", {})
-    insights = await call_mos(ctx, "/api/matomo-analytics/insights", {})
+    traffic = await call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}, site=site)
+    trends = await call_mos(ctx, "/api/matomo-analytics/trends", {}, site=site)
+    insights = await call_mos(ctx, "/api/matomo-analytics/insights", {}, site=site)
     for d in (traffic, trends, insights):
         if "error" in d:
             return _err(d)
     return ActionResult.success(data={
         "traffic": traffic, "trends": trends, "insights": insights,
     })
-
-
-# ─── blog_analytics ───────────────────────────────────────────────────────────
-
-@chat.function("blog_analytics",
-               description=(
-                   "Traffic and top content for the blog subdomain only (e.g. blog.example.com). "
-                   "Filters Matomo to blog pages, shows top articles, traffic, trends. "
-                   "Use for: аналитика блога, топ статьи, трафик блога, "
-                   "blog traffic, which articles perform best, блог статистика, "
-                   "blog.webhostmost.com, контент который читают."
-               ),
-               action_type="read", event="analytics.action.result", data_model=AnalyticsScalarResponse)
-async def fn_blog_analytics(ctx, params: _BlogParams) -> ActionResult:
-    """Handler: fn_blog_analytics."""
-    s = await load_settings(ctx)
-    blog_url = (s.get("blog_url") or "").strip().rstrip("/")
-
-    if not blog_url:
-        return ActionResult.success(
-            data={},
-            summary="Blog URL not configured — add blog URL in Analytics Settings",
-            ui=ui.Alert(
-                message="Set your blog URL in Analytics Settings (e.g. https://blog.webhostmost.com) "
-                        "to enable blog-specific analytics.",
-                type="warning",
-            ),
-        )
-
-    # Build Matomo segment for blog pages
-    blog_segment = f"pageUrl=^{blog_url}"
-    # Use blog_site_id if explicitly configured (blog may be on a different Matomo site)
-    raw_blog_site = s.get("blog_site_id") or 0
-    blog_site_override = {"site_id": int(raw_blog_site)} if raw_blog_site else {}
-
-    traffic, top_pages, insights = await asyncio.gather(
-        call_mos(ctx, "/api/matomo-analytics/traffic", {
-            "period": params.period, "date": params.date, "segment": blog_segment,
-            **blog_site_override,
-        }),
-        call_mos(ctx, "/api/matomo-analytics/top-pages", {
-            "period": params.period, "date": params.date, "limit": 10, "segment": blog_segment,
-            **blog_site_override,
-        }),
-        call_mos(ctx, "/api/matomo-analytics/insights", {"segment": blog_segment, **blog_site_override}),
-    )
-
-    for d in (traffic, top_pages, insights):
-        if "error" in d:
-            return ActionResult.error(error=d.get("error", "unknown error"))
-
-    await save_result(ctx, "blog_analytics", "Blog analytics", {
-        "traffic": traffic, "top_pages": top_pages, "insights": insights,
-    })
-
-    visits   = traffic.get("visits", 0)
-    pv       = traffic.get("pageviews", 0)
-    pages    = top_pages.get("pages") or []
-    top_art  = pages[0].get("url", "—") if pages else "—"
-    top_v    = pages[0].get("views", 0) if pages else 0
-    crit     = insights.get("critical_count", 0)
-    warn     = insights.get("warning_count", 0)
-
-    rows = [
-        {
-            "article": (p.get("url") or "/")[-60:],
-            "views":   f"{p.get('views', 0):,}",
-            "bounce":  p.get("bounce_rate", "—"),
-            "time":    f"{int(p.get('avg_time', 0)//60)}m{int(p.get('avg_time', 0)%60)}s" if p.get("avg_time") else "—",
-        }
-        for p in pages[:10]
-    ]
-
-    table = ui.DataTable(
-        columns=[
-            ui.DataColumn(key="article", label="Article",  width="50%"),
-            ui.DataColumn(key="views",   label="Views",    width="17%"),
-            ui.DataColumn(key="bounce",  label="Bounce",   width="16%"),
-            ui.DataColumn(key="time",    label="Avg time", width="17%"),
-        ],
-        rows=rows,
-    ) if rows else ui.Empty(message="No blog posts found for this period")
-
-    return ActionResult.success(
-        data={"traffic": traffic, "top_pages": top_pages, "insights": insights},
-        summary=(
-            f"Blog {blog_url}: {visits:,} visits, {pv:,} pageviews | "
-            f"Top: {top_art} ({top_v:,}) | Alerts: {crit} critical, {warn} warnings"
-        ),
-        ui=ui.Stack(children=[
-            ui.Stats(children=[
-                ui.Stat(label="Visits",    value=f"{visits:,}", color="blue", icon="FileText"),
-                ui.Stat(label="Pageviews", value=f"{pv:,}",    color="gray"),
-                ui.Stat(label="Articles",  value=str(len(pages)), color="violet"),
-                ui.Stat(label="Alerts",    value=f"{crit}/{warn}",
-                        color="red" if crit else "yellow" if warn else "green"),
-            ]),
-            table,
-        ]),
-    )

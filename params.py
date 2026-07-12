@@ -28,29 +28,46 @@ _PERIOD_HELP = (
     "Use 'range' when the user specifies a specific start and end date."
 )
 
+_SITE_HELP = (
+    "Which site/project to report on - a label from list_sites (e.g. "
+    "'Main Website', 'Blog'). Omit to use the user's default site."
+)
+
 
 class TrafficParams(BaseModel):
     period: Period = Field(default="day", description=_PERIOD_HELP)
     date: str = Field(default="last7", description=_DATE_HELP)
+    site: str = Field(default="", description=_SITE_HELP)
 
 
 class TopPagesParams(BaseModel):
     period: Period = Field(default="month", description=_PERIOD_HELP)
     date: str = Field(default="today", description=_DATE_HELP)
     limit: int = Field(default=10, ge=1, le=100)
+    site: str = Field(default="", description=_SITE_HELP)
 
 
 class TrendsParams(BaseModel):
-    """No params - compares the last 7 full days to the 7 before that."""
-    pass
+    """Compares the last 7 full days to the 7 before that."""
+    site: str = Field(default="", description=_SITE_HELP)
 
 
 class SaveSettingsParams(BaseModel):
-    """Form payload - user's own Matomo only. Server creds are baked-in."""
-    matomo_url: str = ""
-    matomo_token: str = ""
-    matomo_site_id: int = 1
+    """Form payload for non-secret settings. Matomo URL/Auth Token live in the
+    platform's Secrets panel (EXT-SECRETS-V1), not here."""
     matomo_segment: str = ""
-    blog_url: str = ""          # e.g. https://blog.example.com
-    blog_site_id: int = 0       # Matomo site ID for blog (0 = same as main site_id)
     utm_source_dim_id: int = 0  # Custom Dimension ID for utm_source (0 = disabled)
+
+
+class AddSiteParams(BaseModel):
+    label: str = Field(min_length=1, max_length=60, description="Display name for this site/project, e.g. 'Main Website' or 'Blog'.")
+    site_id: int = Field(ge=1, description="The Matomo site ID (idSite) to track under this label.")
+
+
+class RemoveSiteParams(BaseModel):
+    label: str = Field(min_length=1, description="Label of the site to remove, as shown by list_sites.")
+
+
+class ListSitesParams(BaseModel):
+    """No input needed."""
+    pass

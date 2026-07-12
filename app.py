@@ -20,16 +20,15 @@ from imperal_sdk import Extension, ChatExtension
 # (web-tools, seo-tools, ...) - not a per-user secret, so it's a plain
 # constant rather than a declared ctx.secrets entry. MATOMO_BACKEND_URL stays
 # as an override hook for local/dev testing against a different bridge.
-# The backend (matomo-analytics-api on api-server:8105) does not currently
-# check X-API-Key at all, so an unset key is harmless.
+# The backend (matomo-analytics-api on api-server:8105) checks no auth header
+# at all, so there's no API key to configure here.
 SERVER_URL = os.environ.get("MATOMO_BACKEND_URL", "") or "https://api.webhostmost.com"
-SERVER_API_KEY = os.environ.get("MATOMO_BACKEND_API_KEY", "")
 
 ext = Extension(
     "imperal-matomo-analytics-extension",
-    version="4.0.8",
-    display_name="Matomo Analytics",
-    description="Traffic analytics dashboard: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection from your Matomo instance.",
+    version="5.0.0",
+    display_name="Matomo Analytics Connector",
+    description="Traffic analytics dashboard: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection from your Matomo instance. Track multiple sites/projects under one Matomo account.",
     icon="icon.svg",
     actions_explicit=True,
     capabilities=[
@@ -41,6 +40,7 @@ ext = Extension(
         "Campaign Analytics",
         "AI Daily Report",
         "Anomaly Detection",
+        "Multi-Site Tracking",
     ],
 )
 
@@ -54,6 +54,8 @@ chat = ChatExtension(
         "new vs returning visitors, session duration, organic keywords, UTM campaigns, "
         "social networks, outbound links, site search, AI referrers (ChatGPT/Perplexity/Claude), "
         "real-time visitors, traffic trends, anomalies, daily reports, audience insights. "
+        "Sites are per-project - pass `site` (a label from list_sites) when the user names "
+        "a specific site/project; omit it for their default site. "
         "Keywords: трафик, посетители, визиты, страницы, аналитика сайта, "
         "откуда трафик, откуда идёт трафик, откуда приходит трафик, источники трафика, "
         "топ источников, прямые переходы, органический трафик Matomo, "
@@ -62,18 +64,36 @@ chat = ChatExtension(
     max_rounds=5,
 )
 
+# EXT-SECRETS-V1 - Matomo URL + Auth Token are real per-user credentials, so
+# they're declared here and stored via the platform's own secrets vault
+# (ctx.secrets), not as plain ctx.store fields. write_mode="user" means the
+# platform auto-registers a "Secrets" panel where the user pastes these in
+# directly - the extension only ever reads them (ctx.secrets.get), it never
+# writes them itself.
+ext.secret(
+    name="matomo_url",
+    description="Your Matomo instance URL, e.g. https://analytics.example.com",
+    required=True,
+    write_mode="user",
+    max_bytes=500,
+)(lambda: None)
+
+ext.secret(
+    name="matomo_token",
+    description="Matomo Auth Token — Matomo → Personal → Security → Auth tokens",
+    required=True,
+    write_mode="user",
+    max_bytes=200,
+)(lambda: None)
+
 SETTINGS_COLLECTION = "analytics_settings"
 RESULT_COLLECTION = "analytics_result"
 
 
 DEFAULT_SETTINGS = {
-    "matomo_url": "",
-    "matomo_token": "",
-    "matomo_site_id": 1,
     "matomo_segment": "",
-    "blog_url": "",         # e.g. https://blog.webhostmost.com
-    "blog_site_id": 2,      # Matomo site_id for blog subdomain (blog.webhostmost.com = site 2)
     "utm_source_dim_id": 0, # Custom Dimension ID for utm_source (0 = disabled)
+    "sites": [],            # [{"label": str, "site_id": int}, ...] - per-project analytics
 }
 
 
@@ -101,30 +121,57 @@ async def load_result(ctx) -> dict | None:
 
 
 async def load_settings(ctx) -> dict:
-    """Load the user's single settings doc; fall back to defaults if missing."""
+    """Load the user's settings doc (ctx.store) merged with Matomo credentials
+    (ctx.secrets) - credentials go through the platform's own secrets vault
+    (EXT-SECRETS-V1), not plain ctx.store fields."""
     try:
         page = await ctx.store.query(SETTINGS_COLLECTION, limit=1)
     except Exception:
-        return dict(DEFAULT_SETTINGS)
-    docs = getattr(page, "data", None) or []
-    if docs and isinstance(getattr(docs[0], "data", None), dict):
-        return {**DEFAULT_SETTINGS, **docs[0].data}
-    return dict(DEFAULT_SETTINGS)
+        page = None
+    docs = (getattr(page, "data", None) or []) if page else []
+    stored = docs[0].data if docs and isinstance(getattr(docs[0], "data", None), dict) else {}
+    settings = {**DEFAULT_SETTINGS, **stored}
+
+    # One-time migration: pre-multisite installs stored a single
+    # matomo_site_id - fold it into `sites` as the default entry.
+    if not settings["sites"] and stored.get("matomo_site_id"):
+        settings["sites"] = [{"label": "Основной сайт", "site_id": int(stored["matomo_site_id"])}]
+
+    settings["matomo_url"] = await ctx.secrets.get("matomo_url") or ""
+    settings["matomo_token"] = await ctx.secrets.get("matomo_token") or ""
+    return settings
 
 
 async def save_settings(ctx, values: dict) -> dict:
-    """Upsert the settings doc: update existing if present, else create."""
+    """Upsert the settings doc: update existing if present, else create.
+    matomo_url/matomo_token are never persisted here - they live in
+    ctx.secrets, written only via the platform's own Secrets panel."""
     current = await load_settings(ctx)
     merged = {**current, **{k: v for k, v in values.items() if v is not None and v != ""}}
+    store_fields = {k: v for k, v in merged.items() if k not in ("matomo_url", "matomo_token")}
 
     page = await ctx.store.query(SETTINGS_COLLECTION, limit=1)
     docs = getattr(page, "data", None) or []
     if docs:
-        await ctx.store.update(SETTINGS_COLLECTION, docs[0].id, merged)
+        await ctx.store.update(SETTINGS_COLLECTION, docs[0].id, store_fields)
     else:
-        await ctx.store.create(SETTINGS_COLLECTION, merged)
+        await ctx.store.create(SETTINGS_COLLECTION, store_fields)
     return merged
 
 
 def matomo_ready(s: dict) -> bool:
     return bool(s.get("matomo_url") and s.get("matomo_token"))
+
+
+def resolve_site_id(s: dict, site: str = "") -> int:
+    """Resolve a `site` label (from list_sites) to its Matomo site_id.
+    Falls back to the first configured site, then to Matomo's default site 1."""
+    sites = s.get("sites") or []
+    if site:
+        needle = site.strip().lower()
+        for entry in sites:
+            if str(entry.get("label", "")).strip().lower() == needle:
+                return int(entry["site_id"])
+    if sites:
+        return int(sites[0]["site_id"])
+    return 1

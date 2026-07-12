@@ -25,7 +25,10 @@ async def skeleton_refresh_traffic_overview(ctx) -> dict:
     pageviews = data.get("pageviews", 0)
     bounce = data.get("bounce_rate", 0)
     avg_time = data.get("avg_time_on_site", 0)
-    wow = data.get("visits_evolution", data.get("evolution", None))
+
+    # WoW change comes from the separate /trends endpoint, not /traffic.
+    trends = await call_mos(ctx, "/api/matomo-analytics/trends", {})
+    wow = trends.get("change_percent") if "error" not in trends else None
 
     return {"response": {
         "configured": True,
@@ -52,12 +55,12 @@ async def skeleton_refresh_top_pages(ctx) -> dict:
         return {"response": {"pages": [], "total": 0,
                              "instruction": "Top pages unavailable."}}
 
-    raw = data.get("data", data.get("pages", []))[:10]
+    raw = (data.get("pages") or [])[:10]
     pages = []
     for p in raw:
         pages.append({
-            "url": p.get("url", p.get("page", p.get("label", ""))),
-            "visits": p.get("visits", p.get("nb_visits", 0)),
+            "url": p.get("url", ""),
+            "visits": p.get("views", 0),
             "bounce_pct": p.get("bounce_rate", 0),
             "avg_time_s": p.get("avg_time_on_page", 0),
         })
@@ -76,9 +79,9 @@ async def skeleton_refresh_realtime(ctx) -> dict:
     if "error" in data:
         return {"response": {"visitors_30m": 0, "instruction": "Real-time data unavailable."}}
 
-    v30  = data.get("visitors_30m",  data.get("30min",  0))
-    v60  = data.get("visitors_60m",  data.get("60min",  0))
-    v180 = data.get("visitors_180m", data.get("180min", 0))
+    v30  = (data.get("live_30m")  or {}).get("visitors", 0)
+    v60  = (data.get("live_60m")  or {}).get("visitors", 0)
+    v180 = (data.get("live_180m") or {}).get("visitors", 0)
 
     return {"response": {
         "visitors_30m": v30,
@@ -89,17 +92,17 @@ async def skeleton_refresh_realtime(ctx) -> dict:
 
 
 @ext.skeleton("matomo_config", ttl=600,
-              description="Matomo connection status, site URL, site ID, blog URL, UTM dimension ID")
+              description="Matomo connection status, configured sites/projects, UTM dimension ID")
 async def skeleton_refresh_matomo_config(ctx) -> dict:
     s = await load_settings(ctx)
     configured = matomo_ready(s)
+    sites = s.get("sites") or []
+    site_labels = ", ".join(site.get("label", "") for site in sites) if sites else "none"
     return {"response": {
         "configured": configured,
-        "matomo_url": s.get("matomo_url", ""),
-        "site_id": s.get("matomo_site_id", 1),
-        "blog_url": s.get("blog_url", ""),
+        "sites": sites,
         "utm_source_dim_id": s.get("utm_source_dim_id", 0),
         "instruction": (
-            f"Matomo: {'✓ connected at ' + s.get('matomo_url', '') if configured else '✗ NOT configured — open Settings'}"
+            f"Matomo: {'✓ connected, sites: ' + site_labels if configured else '✗ NOT configured — open Settings'}"
         ),
     }}
