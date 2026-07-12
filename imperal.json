@@ -74,7 +74,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -207,7 +207,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -318,7 +318,7 @@
         "properties": {
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -405,7 +405,7 @@
     },
     {
       "name": "add_site",
-      "description": "Add a site/project to track — each Matomo account can track multiple websites under different site IDs. Use for: добавь сайт, новый проект, add another site, track my blog separately, добавить ещё один сайт.",
+      "description": "Add a site/project to track — each Matomo account can track multiple websites under different site IDs. Use for: добавь сайт, новый проект, add another site, track a second project separately, добавить ещё один сайт.",
       "action_type": "write",
       "chain_callable": true,
       "effects": [
@@ -415,7 +415,7 @@
       "params_schema": {
         "properties": {
           "label": {
-            "description": "Display name for this site/project, e.g. 'Main Website' or 'Blog'.",
+            "description": "Display name for this site/project, e.g. 'Main Website' or 'Site 2'.",
             "maxLength": 60,
             "minLength": 1,
             "title": "Label",
@@ -665,6 +665,90 @@
       "owner_chat_tool": "analytics"
     },
     {
+      "name": "site_domains",
+      "description": "Which domains/URLs are actually configured for a site/project in Matomo - the real main_url and every URL alias from Matomo's own SitesManager, not guessed from referrer or page traffic. Use for: какие домены привязаны к сайту, какой домен у сайта, site domains, site URLs, what domains does this site cover.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
+          }
+        },
+        "title": "SiteDomainsParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "main_url": {
+            "default": "",
+            "title": "Main Url",
+            "type": "string"
+          },
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Urls",
+            "type": "array"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Timezone"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Currency"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created At"
+          }
+        },
+        "title": "SiteInfoResponse",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
       "name": "real_time",
       "description": "Live active visitors right now: 30 min / 60 min / 3 hour windows. Use for: сколько людей сейчас на сайте, онлайн посетители, live visitors, real-time, кто сейчас.",
       "action_type": "read",
@@ -675,7 +759,7 @@
         "properties": {
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -771,7 +855,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -851,7 +935,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -931,7 +1015,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1011,7 +1095,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1128,7 +1212,7 @@
         "properties": {
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1209,7 +1293,7 @@
         "properties": {
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1250,7 +1334,7 @@
         "properties": {
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1333,7 +1417,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1411,7 +1495,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1532,7 +1616,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1635,7 +1719,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1732,7 +1816,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1802,7 +1886,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1882,7 +1966,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -1962,7 +2046,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2042,7 +2126,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2129,7 +2213,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2209,7 +2293,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2289,7 +2373,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2369,7 +2453,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2449,7 +2533,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2529,7 +2613,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2616,7 +2700,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2696,7 +2780,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2776,7 +2860,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2856,7 +2940,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -2936,7 +3020,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }
@@ -3016,7 +3100,7 @@
           },
           "site": {
             "default": "",
-            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
           }

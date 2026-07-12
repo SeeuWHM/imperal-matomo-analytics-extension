@@ -173,3 +173,12 @@ class SitesListResponse(BaseModel):
 
 class SavedKeysResponse(BaseModel):
     saved_keys: list[str] = Field(default_factory=list)
+
+
+class SiteInfoResponse(BaseModel):
+    name: str = ""
+    main_url: str = ""
+    urls: list[str] = Field(default_factory=list)
+    timezone: Optional[str] = None
+    currency: Optional[str] = None
+    created_at: Optional[str] = None

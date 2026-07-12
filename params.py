@@ -29,8 +29,8 @@ _PERIOD_HELP = (
 )
 
 _SITE_HELP = (
-    "Which site/project to report on - a label from list_sites (e.g. "
-    "'Main Website', 'Blog'). Omit to use the user's default site."
+    "Which site/project to report on - a label from list_sites (the name the "
+    "user gave when adding it). Omit to use the user's default site."
 )
 
 
@@ -60,7 +60,7 @@ class SaveSettingsParams(BaseModel):
 
 
 class AddSiteParams(BaseModel):
-    label: str = Field(min_length=1, max_length=60, description="Display name for this site/project, e.g. 'Main Website' or 'Blog'.")
+    label: str = Field(min_length=1, max_length=60, description="Display name for this site/project, e.g. 'Main Website' or 'Site 2'.")
     site_id: int = Field(ge=1, description="The Matomo site ID (idSite) to track under this label.")
 
 
@@ -75,6 +75,10 @@ class SetActiveSiteParams(BaseModel):
 class ListSitesParams(BaseModel):
     """No input needed."""
     pass
+
+
+class SiteDomainsParams(BaseModel):
+    site: str = Field(default="", description=_SITE_HELP)
 
 
 # ─── Audience / channel breakdown params — shared across handlers_audience.py

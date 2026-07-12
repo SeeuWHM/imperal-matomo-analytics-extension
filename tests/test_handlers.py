@@ -27,7 +27,7 @@ import app as app_module
 from params import (
     TrafficParams, TopPagesParams, TrendsParams, SaveSettingsParams,
     AddSiteParams, RemoveSiteParams, ListSitesParams, ConversionsParams,
-    SetActiveSiteParams,
+    SetActiveSiteParams, SiteDomainsParams,
 )
 
 
@@ -217,6 +217,32 @@ async def test_set_active_site():
 async def test_set_active_site_unknown_label():
     ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}]})
     result = await handlers_settings.fn_set_active_site(ctx, SetActiveSiteParams(label="Ghost"))
+    assert result.status == "error"
+
+
+# ─── site_domains — real Matomo SitesManager data, not inferred from traffic ──
+
+@pytest.mark.asyncio
+async def test_site_domains_success(monkeypatch):
+    async def fake_call(ctx, endpoint, extra=None, site=""):
+        assert endpoint == "/api/matomo-analytics/site-info"
+        return {"name": "Front Websites", "main_url": "https://www.example.com",
+                "urls": ["https://www.example.com", "https://blog.example.com"]}
+
+    monkeypatch.setattr(handlers_settings, "call_mos", fake_call)
+    result = await handlers_settings.fn_site_domains(_ctx(), SiteDomainsParams())
+    assert result.status == "success"
+    assert result.data["urls"] == ["https://www.example.com", "https://blog.example.com"]
+    assert "2" in result.summary or "www.example.com" in result.summary
+
+
+@pytest.mark.asyncio
+async def test_site_domains_error(monkeypatch):
+    async def fake_call(ctx, endpoint, extra=None, site=""):
+        return {"error": "Matomo not configured - open Settings and add your URL + Auth Token.", "_config": True}
+
+    monkeypatch.setattr(handlers_settings, "call_mos", fake_call)
+    result = await handlers_settings.fn_site_domains(_ctx(secrets={}), SiteDomainsParams())
     assert result.status == "error"
 
 

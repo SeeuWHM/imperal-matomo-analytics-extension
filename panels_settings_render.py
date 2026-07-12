@@ -27,7 +27,7 @@ def sites_list(s: dict) -> ui.UINode:
         action="add_site",
         submit_label="Add site",
         children=[
-            ui.Input(placeholder="Label - e.g. Main Website, Blog, Docs", param_name="label"),
+            ui.Input(placeholder="Label - e.g. Main Website, Site 2", param_name="label"),
             ui.Input(placeholder="Matomo site_id - e.g. 1", param_name="site_id"),
         ],
     )

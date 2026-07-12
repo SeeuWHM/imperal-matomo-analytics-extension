@@ -53,13 +53,15 @@ chat = ChatExtension(
         "top pages, countries, devices, browsers, screen resolutions, ISPs, "
         "new vs returning visitors, session duration, organic keywords, UTM campaigns, "
         "social networks, outbound links, site search, AI referrers (ChatGPT/Perplexity/Claude), "
-        "real-time visitors, traffic trends, anomalies, daily reports, audience insights. "
+        "real-time visitors, traffic trends, anomalies, daily reports, audience insights, "
+        "which domains/URLs are configured for a site (site_domains). "
         "Sites are per-project - pass `site` (a label from list_sites) when the user names "
         "a specific site/project; omit it for their default site. "
         "Keywords: трафик, посетители, визиты, страницы, аналитика сайта, "
         "откуда трафик, откуда идёт трафик, откуда приходит трафик, источники трафика, "
         "топ источников, прямые переходы, органический трафик Matomo, "
-        "браузеры, страны, устройства, разрешения, аномалии, инсайты."
+        "браузеры, страны, устройства, разрешения, аномалии, инсайты, "
+        "домены сайта, привязанные домены, site domains."
     ),
     max_rounds=5,
 )
