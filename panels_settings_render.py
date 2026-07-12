@@ -4,18 +4,21 @@ from __future__ import annotations
 
 from imperal_sdk import ui
 
-from app import ext, matomo_ready
+from app import ext, matomo_ready, active_site_label
 
 
 def sites_list(s: dict) -> ui.UINode:
     """Manage which Matomo site_ids are tracked as named projects."""
     sites = s.get("sites") or []
-    rows = [{"label": site.get("label", "-"), "site_id": str(site.get("site_id", "-"))}
+    active = active_site_label(s)
+    rows = [{"label": site.get("label", "-"), "site_id": str(site.get("site_id", "-")),
+             "default": "★ default" if site.get("label") == active else ""}
             for site in sites]
     table = ui.DataTable(
         columns=[
-            ui.DataColumn(key="label", label="Site / project", width="60%"),
-            ui.DataColumn(key="site_id", label="Matomo site_id", width="40%"),
+            ui.DataColumn(key="label", label="Site / project", width="45%"),
+            ui.DataColumn(key="site_id", label="Matomo site_id", width="25%"),
+            ui.DataColumn(key="default", label="", width="30%"),
         ],
         rows=rows,
     ) if rows else ui.Empty(message="No sites yet - add one below.")
@@ -28,6 +31,17 @@ def sites_list(s: dict) -> ui.UINode:
             ui.Input(placeholder="Matomo site_id - e.g. 1", param_name="site_id"),
         ],
     )
+    switch_form = ui.Form(
+        action="set_active_site",
+        submit_label="Make default",
+        children=[
+            ui.Select(
+                options=[{"value": site["label"], "label": site["label"]} for site in sites],
+                value=active,
+                param_name="label",
+            ),
+        ],
+    ) if len(sites) > 1 else None
     remove_form = ui.Form(
         action="remove_site",
         submit_label="Remove site",
@@ -37,6 +51,8 @@ def sites_list(s: dict) -> ui.UINode:
     ) if rows else None
 
     children = [table, add_form]
+    if switch_form:
+        children.append(switch_form)
     if remove_form:
         children.append(remove_form)
     return ui.Stack(children=children)

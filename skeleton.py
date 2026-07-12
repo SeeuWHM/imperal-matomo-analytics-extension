@@ -3,7 +3,7 @@
 Per Imperal SDK: skeleton = LLM context cache holding ready API responses.
 More data here = better Webbee routing and answers.
 """
-from app import ext, load_settings, matomo_ready
+from app import ext, load_settings, matomo_ready, active_site_label
 from api_client import call_mos
 
 
@@ -98,11 +98,14 @@ async def skeleton_refresh_matomo_config(ctx) -> dict:
     configured = matomo_ready(s)
     sites = s.get("sites") or []
     site_labels = ", ".join(site.get("label", "") for site in sites) if sites else "none"
+    active = active_site_label(s)
     return {"response": {
         "configured": configured,
         "sites": sites,
+        "active_site": active,
         "utm_source_dim_id": s.get("utm_source_dim_id", 0),
         "instruction": (
-            f"Matomo: {'✓ connected, sites: ' + site_labels if configured else '✗ NOT configured — open Settings'}"
+            f"Matomo: ✓ connected, sites: {site_labels} (default: {active}) — pass `site` to report on a "
+            "different one" if configured else "Matomo: ✗ NOT configured — open Settings"
         ),
     }}

@@ -94,6 +94,7 @@ DEFAULT_SETTINGS = {
     "matomo_segment": "",
     "utm_source_dim_id": 0, # Custom Dimension ID for utm_source (0 = disabled)
     "sites": [],            # [{"label": str, "site_id": int}, ...] - per-project analytics
+    "active_site": "",      # label of the site shown by default (sidebar/dashboard/chat)
 }
 
 
@@ -165,13 +166,31 @@ def matomo_ready(s: dict) -> bool:
 
 def resolve_site_id(s: dict, site: str = "") -> int:
     """Resolve a `site` label (from list_sites) to its Matomo site_id.
-    Falls back to the first configured site, then to Matomo's default site 1."""
+    Falls back to the user's active site (set_active_site), then the first
+    configured site, then Matomo's default site 1."""
     sites = s.get("sites") or []
-    if site:
-        needle = site.strip().lower()
+    needle = (site or s.get("active_site") or "").strip().lower()
+    if needle:
         for entry in sites:
             if str(entry.get("label", "")).strip().lower() == needle:
                 return int(entry["site_id"])
     if sites:
         return int(sites[0]["site_id"])
     return 1
+
+
+def active_site_label(s: dict) -> str:
+    """Which site label is currently the default - the explicit active_site
+    if set (and still valid), else the first configured site, else ''."""
+    sites = s.get("sites") or []
+    active = (s.get("active_site") or "").strip().lower()
+    for entry in sites:
+        if str(entry.get("label", "")).strip().lower() == active:
+            return entry["label"]
+    return sites[0]["label"] if sites else ""
+
+
+def sites_with_active(s: dict) -> list[dict]:
+    """Sites list annotated with `active: bool` for display/IPC."""
+    active = active_site_label(s)
+    return [{**site, "active": site.get("label") == active} for site in (s.get("sites") or [])]

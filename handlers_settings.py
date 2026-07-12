@@ -3,8 +3,8 @@
 
 from imperal_sdk.types import ActionResult
 
-from app import chat, save_settings, load_settings
-from params import SaveSettingsParams, AddSiteParams, RemoveSiteParams, ListSitesParams
+from app import chat, save_settings, load_settings, sites_with_active
+from params import SaveSettingsParams, AddSiteParams, RemoveSiteParams, ListSitesParams, SetActiveSiteParams
 from response_models import SavedKeysResponse, SitesListResponse
 
 
@@ -50,10 +50,14 @@ async def fn_add_site(ctx, params: AddSiteParams) -> ActionResult:
     s = await load_settings(ctx)
     sites = [site for site in (s.get("sites") or []) if site.get("label", "").strip().lower() != params.label.strip().lower()]
     sites.append({"label": params.label.strip(), "site_id": params.site_id})
-    await save_settings(ctx, {"sites": sites})
+    updates = {"sites": sites}
+    if len(sites) == 1:
+        updates["active_site"] = sites[0]["label"]  # first site added becomes the default
+    s = await save_settings(ctx, updates)
     return ActionResult.success(
-        data={"sites": sites},
+        data={"sites": sites_with_active(s)},
         summary=f"Added site '{params.label}' (Matomo site_id {params.site_id}). {len(sites)} site(s) configured.",
+        refresh_panels=["sidebar", "workspace", "analytics_hub"],
     )
 
 
@@ -74,10 +78,18 @@ async def fn_remove_site(ctx, params: RemoveSiteParams) -> ActionResult:
     remaining = [site for site in sites if site.get("label", "").strip().lower() != needle]
     if len(remaining) == len(sites):
         return ActionResult.error(error=f"No site named '{params.label}' found.")
-    await save_settings(ctx, {"sites": remaining})
+    updates = {"sites": remaining}
+    if remaining and s.get("active_site", "").strip().lower() == needle:
+        # save_settings treats "" as "keep current value" - only reassign
+        # when there's a real site left to fall back to; resolve_site_id()
+        # already ignores a stale active_site label and falls back to
+        # sites[0] on its own, so leaving it untouched otherwise is safe.
+        updates["active_site"] = remaining[0]["label"]
+    s = await save_settings(ctx, updates)
     return ActionResult.success(
-        data={"sites": remaining},
+        data={"sites": sites_with_active(s)},
         summary=f"Removed site '{params.label}'. {len(remaining)} site(s) remaining.",
+        refresh_panels=["sidebar", "workspace", "analytics_hub"],
     )
 
 
@@ -91,14 +103,44 @@ async def fn_remove_site(ctx, params: RemoveSiteParams) -> ActionResult:
 async def fn_list_sites(ctx, params: ListSitesParams) -> ActionResult:
     """List configured sites/projects."""
     s = await load_settings(ctx)
-    sites = s.get("sites") or []
+    sites = sites_with_active(s)
     if not sites:
         return ActionResult.success(
             data={"sites": []},
             summary="No sites configured yet — use add_site to add one.",
         )
-    lines = ", ".join(f"{site['label']} (site_id {site['site_id']})" for site in sites)
+    lines = ", ".join(
+        f"{site['label']} (site_id {site['site_id']}){' — default' if site['active'] else ''}"
+        for site in sites
+    )
     return ActionResult.success(
         data={"sites": sites},
         summary=f"{len(sites)} site(s): {lines}",
+    )
+
+
+@chat.function(
+    "set_active_site",
+    description="Switch which site/project is the default - used by the sidebar, the dashboard "
+                "and chat questions where the user doesn't name a site. Use for: переключи на сайт X, "
+                "сделай сайт X основным, switch to site X, make X the default site/project.",
+    action_type="write",
+    chain_callable=True,
+    effects=["update:settings"],
+    event="analytics.settings.saved",
+    data_model=SitesListResponse,
+)
+async def fn_set_active_site(ctx, params: SetActiveSiteParams) -> ActionResult:
+    """Set which configured site is the default for chat/dashboard/sidebar."""
+    s = await load_settings(ctx)
+    needle = params.label.strip().lower()
+    match = next((site for site in (s.get("sites") or [])
+                  if site.get("label", "").strip().lower() == needle), None)
+    if not match:
+        return ActionResult.error(error=f"No site named '{params.label}' found.")
+    s = await save_settings(ctx, {"active_site": match["label"]})
+    return ActionResult.success(
+        data={"sites": sites_with_active(s)},
+        summary=f"Default site switched to '{match['label']}'.",
+        refresh_panels=["sidebar", "workspace", "analytics_hub"],
     )

@@ -16,13 +16,32 @@ import asyncio
 
 from imperal_sdk import ui
 
-from app import ext, load_settings, load_result, matomo_ready
+from app import ext, load_settings, load_result, matomo_ready, active_site_label
 from api_client import call_mos
 from panels_render import (
     kpi_stats, chart, insights_cards, pages_table,
     breakdown_table, entry_exit_table, result_zone,
 )
 from panels_settings_render import settings_form
+
+
+def _site_selector(s: dict) -> ui.UINode | None:
+    """Compact site/project switcher - only shown once there's more than one
+    site to pick between, so single-site users see no extra clutter."""
+    sites = s.get("sites") or []
+    if len(sites) < 2:
+        return None
+    return ui.Form(
+        action="set_active_site",
+        submit_label="Switch",
+        children=[
+            ui.Select(
+                options=[{"value": site["label"], "label": site["label"]} for site in sites],
+                value=active_site_label(s),
+                param_name="label",
+            ),
+        ],
+    )
 
 
 # ─────────────────────── Left sidebar ─────────────────────
@@ -54,12 +73,14 @@ async def sidebar_panel(ctx):
     yesterday = series[-2].get("visits", 0) if len(series) >= 2 else 0
     live = (rt.get("live_30m") or {}).get("visitors", 0) if not isinstance(rt, Exception) else 0
 
+    site_selector = _site_selector(s)
     root = ui.Stack(children=[
         ui.Header(text="📊 Analytics", level=4),
         ui.Stack(children=[
             ui.Badge(label="● live", color="green"),
             ui.Text(content=host, variant="caption"),
         ], direction="h"),
+        *([site_selector] if site_selector else []),
         ui.Divider(),
         ui.Stats(children=[
             ui.Stat(label="Live", value=str(live), color="violet", icon="Users"),
@@ -141,8 +162,12 @@ async def workspace_panel(ctx):
                    children=[settings_form(s)]),
     ]
 
+    header_children = [ui.Header(text="Analytics", level=3)]
+    if len(s.get("sites") or []) > 1:
+        header_children.append(ui.Badge(label=active_site_label(s), color="violet"))
+
     return ui.Stack(children=[
-        ui.Header(text="Analytics", level=3),
+        ui.Stack(direction="h", gap=4, align="center", children=header_children),
         result_zone(last),
         ui.Divider(),
         kpi_stats(d),

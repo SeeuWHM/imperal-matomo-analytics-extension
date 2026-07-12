@@ -68,6 +68,10 @@ class RemoveSiteParams(BaseModel):
     label: str = Field(min_length=1, description="Label of the site to remove, as shown by list_sites.")
 
 
+class SetActiveSiteParams(BaseModel):
+    label: str = Field(min_length=1, description="Label of the site/project to make the default (from list_sites).")
+
+
 class ListSitesParams(BaseModel):
     """No input needed."""
     pass

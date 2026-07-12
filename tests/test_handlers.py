@@ -27,6 +27,7 @@ import app as app_module
 from params import (
     TrafficParams, TopPagesParams, TrendsParams, SaveSettingsParams,
     AddSiteParams, RemoveSiteParams, ListSitesParams, ConversionsParams,
+    SetActiveSiteParams,
 )
 
 
@@ -96,6 +97,36 @@ def test_resolve_site_id_no_sites_configured():
     assert app_module.resolve_site_id({"sites": []}, "") == 1
 
 
+def test_resolve_site_id_falls_back_to_active_site():
+    s = {"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}],
+         "active_site": "Blog"}
+    assert app_module.resolve_site_id(s, "") == 2          # no explicit site -> active_site
+    assert app_module.resolve_site_id(s, "Main") == 1       # explicit site still overrides
+
+
+def test_resolve_site_id_ignores_stale_active_site():
+    s = {"sites": [{"label": "Main", "site_id": 1}], "active_site": "Deleted"}
+    assert app_module.resolve_site_id(s, "") == 1
+
+
+def test_active_site_label():
+    s = {"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}],
+         "active_site": "Blog"}
+    assert app_module.active_site_label(s) == "Blog"
+    assert app_module.active_site_label({"sites": [{"label": "Main", "site_id": 1}]}) == "Main"
+    assert app_module.active_site_label({"sites": []}) == ""
+
+
+def test_sites_with_active_marks_correct_entry():
+    s = {"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}],
+         "active_site": "Blog"}
+    marked = app_module.sites_with_active(s)
+    assert marked == [
+        {"label": "Main", "site_id": 1, "active": False},
+        {"label": "Blog", "site_id": 2, "active": True},
+    ]
+
+
 @pytest.mark.asyncio
 async def test_save_settings_never_persists_matomo_credentials():
     """matomo_url/matomo_token must never land in ctx.store - only ctx.secrets."""
@@ -120,6 +151,22 @@ async def test_add_site():
 
 
 @pytest.mark.asyncio
+async def test_add_site_first_site_becomes_active():
+    ctx = _ctx(store={"sites": []})
+    await handlers_settings.fn_add_site(ctx, AddSiteParams(label="Blog", site_id=3))
+    s = await app_module.load_settings(ctx)
+    assert s["active_site"] == "Blog"
+
+
+@pytest.mark.asyncio
+async def test_add_site_second_site_does_not_change_active():
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}], "active_site": "Main"})
+    await handlers_settings.fn_add_site(ctx, AddSiteParams(label="Blog", site_id=2))
+    s = await app_module.load_settings(ctx)
+    assert s["active_site"] == "Main"
+
+
+@pytest.mark.asyncio
 async def test_add_site_replaces_existing_label():
     ctx = _ctx(store={"sites": [{"label": "Blog", "site_id": 3}]})
     await handlers_settings.fn_add_site(ctx, AddSiteParams(label="Blog", site_id=99))
@@ -140,6 +187,36 @@ async def test_remove_site():
 async def test_remove_site_not_found():
     ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}]})
     result = await handlers_settings.fn_remove_site(ctx, RemoveSiteParams(label="Ghost"))
+    assert result.status == "error"
+
+
+@pytest.mark.asyncio
+async def test_remove_active_site_reassigns_to_remaining_site():
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}],
+                       "active_site": "Blog"})
+    await handlers_settings.fn_remove_site(ctx, RemoveSiteParams(label="Blog"))
+    s = await app_module.load_settings(ctx)
+    assert s["active_site"] == "Main"
+
+
+@pytest.mark.asyncio
+async def test_set_active_site():
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}],
+                       "active_site": "Main"})
+    result = await handlers_settings.fn_set_active_site(ctx, SetActiveSiteParams(label="Blog"))
+    assert result.status == "success"
+    assert result.data["sites"] == [
+        {"label": "Main", "site_id": 1, "active": False},
+        {"label": "Blog", "site_id": 2, "active": True},
+    ]
+    s = await app_module.load_settings(ctx)
+    assert s["active_site"] == "Blog"
+
+
+@pytest.mark.asyncio
+async def test_set_active_site_unknown_label():
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}]})
+    result = await handlers_settings.fn_set_active_site(ctx, SetActiveSiteParams(label="Ghost"))
     assert result.status == "error"
 
 

@@ -164,6 +164,7 @@ class BrowsersResponse(BaseModel):
 class SiteEntry(BaseModel):
     label: str = ""
     site_id: int = 0
+    active: bool = False
 
 
 class SitesListResponse(BaseModel):

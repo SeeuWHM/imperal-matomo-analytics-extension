@@ -5,7 +5,7 @@ import asyncio
 
 from imperal_sdk import ui
 
-from app import ext, load_settings, matomo_ready
+from app import ext, load_settings, matomo_ready, active_site_label
 from api_client import call_mos
 from panels_render import kpi_stats, chart, pages_table, breakdown_table
 from panels_settings_render import settings_form
@@ -76,10 +76,13 @@ async def hub_panel(ctx, view: str = "", **_kw):
     host_url = (s.get("matomo_url", "") or "").replace("https://", "").replace("http://", "")[:40]
     change   = trends.get("change_percent", 0)
     direction = trends.get("direction", "flat")
+    site     = active_site_label(s)
+    multi_site = len(s.get("sites") or []) > 1
 
     header = ui.Stack(direction="h", justify="between", align="center", children=[
         ui.Stack(direction="h", gap=4, children=[
             ui.Header(text="📊 Analytics", level=3),
+            *([ui.Badge(label=site, color="violet")] if multi_site else []),
             ui.Badge(label=f"● {live} live", color="green" if live > 0 else "gray"),
         ]),
         ui.Stack(direction="h", gap=2, children=[

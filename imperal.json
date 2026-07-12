@@ -448,6 +448,11 @@
                 "default": 0,
                 "title": "Site Id",
                 "type": "integer"
+              },
+              "active": {
+                "default": false,
+                "title": "Active",
+                "type": "boolean"
               }
             },
             "title": "SiteEntry",
@@ -509,6 +514,11 @@
                 "default": 0,
                 "title": "Site Id",
                 "type": "integer"
+              },
+              "active": {
+                "default": false,
+                "title": "Active",
+                "type": "boolean"
               }
             },
             "title": "SiteEntry",
@@ -559,6 +569,11 @@
                 "default": 0,
                 "title": "Site Id",
                 "type": "integer"
+              },
+              "active": {
+                "default": false,
+                "title": "Active",
+                "type": "boolean"
               }
             },
             "title": "SiteEntry",
@@ -578,6 +593,72 @@
         "type": "object"
       },
       "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "set_active_site",
+      "description": "Switch which site/project is the default - used by the sidebar, the dashboard and chat questions where the user doesn't name a site. Use for: переключи на сайт X, сделай сайт X основным, switch to site X, make X the default site/project.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "update:settings"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "label": {
+            "description": "Label of the site/project to make the default (from list_sites).",
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "SetActiveSiteParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SiteEntry": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "site_id": {
+                "default": 0,
+                "title": "Site Id",
+                "type": "integer"
+              },
+              "active": {
+                "default": false,
+                "title": "Active",
+                "type": "boolean"
+              }
+            },
+            "title": "SiteEntry",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "sites": {
+            "items": {
+              "$ref": "#/$defs/SiteEntry"
+            },
+            "title": "Sites",
+            "type": "array"
+          }
+        },
+        "title": "SitesListResponse",
+        "type": "object"
+      },
+      "event": "analytics.settings.saved",
       "background": false,
       "long_running": false,
       "scopes": [],

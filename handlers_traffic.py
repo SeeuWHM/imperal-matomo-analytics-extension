@@ -8,7 +8,7 @@ import asyncio
 from imperal_sdk import ui
 from imperal_sdk.types import ActionResult
 
-from app import chat, save_result, load_settings, matomo_ready
+from app import chat, save_result, load_settings, matomo_ready, active_site_label
 from api_client import call_mos
 from params import TrafficParams, TopPagesParams, TrendsParams
 from response_models import TrafficOverviewRecord, PageListResponse, TrendSummaryResponse
@@ -202,6 +202,7 @@ async def ipc_matomo_config(ctx) -> ActionResult:
         data={
             "configured": True,
             "sites": s.get("sites", []),
+            "active_site": active_site_label(s),
             "matomo_segment": s.get("matomo_segment", ""),
         },
         summary="Matomo connection status shared.",
