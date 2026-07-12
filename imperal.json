@@ -2,9 +2,9 @@
   "manifest_schema_version": 3,
   "sdk_version": "5.9.3",
   "app_id": "imperal-matomo-analytics-extension",
-  "version": "4.0.8",
-  "name": "Matomo Analytics",
-  "description": "Traffic analytics dashboard: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection from your Matomo instance.",
+  "version": "5.0.0",
+  "name": "Matomo Analytics Connector",
+  "description": "Traffic analytics dashboard for one or more Matomo instances: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection — track multiple sites/projects side by side.",
   "icon": "icon.svg",
   "actions_explicit": true,
   "system": false,
@@ -16,7 +16,8 @@
     "Real-time Visitors",
     "Campaign Analytics",
     "AI Daily Report",
-    "Anomaly Detection"
+    "Anomaly Detection",
+    "Multi-Site Tracking"
   ],
   "tools": [
     {
@@ -39,7 +40,7 @@
     },
     {
       "name": "skeleton_refresh_matomo_config",
-      "description": "Matomo connection status, site URL, site ID, blog URL, UTM dimension ID",
+      "description": "Matomo connection status, configured sites/projects, UTM dimension ID",
       "scopes": [],
       "parameters": {}
     },
@@ -69,6 +70,12 @@
             "default": "last7",
             "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
+            "type": "string"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
             "type": "string"
           }
         },
@@ -197,6 +204,12 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
         "title": "TopPagesParams",
@@ -301,8 +314,15 @@
       "effects": [],
       "id_projection": "",
       "params_schema": {
-        "description": "No params - compares the last 7 full days to the 7 before that.",
-        "properties": {},
+        "description": "Compares the last 7 full days to the 7 before that.",
+        "properties": {
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
+          }
+        },
         "title": "TrendsParams",
         "type": "object"
       },
@@ -340,7 +360,7 @@
     },
     {
       "name": "save_settings",
-      "description": "Save the Analytics extension settings (server + Matomo credentials).",
+      "description": "Save the Analytics extension's non-credential settings (segment, UTM dimension). Matomo URL/Auth Token are entered via the Secrets panel, not here.",
       "action_type": "write",
       "chain_callable": true,
       "effects": [
@@ -348,37 +368,12 @@
       ],
       "id_projection": "",
       "params_schema": {
-        "description": "Form payload - user's own Matomo only. Server creds are baked-in.",
+        "description": "Form payload for non-secret settings. Matomo URL/Auth Token live in the\nplatform's Secrets panel (EXT-SECRETS-V1), not here.",
         "properties": {
-          "matomo_url": {
-            "default": "",
-            "title": "Matomo Url",
-            "type": "string"
-          },
-          "matomo_token": {
-            "default": "",
-            "title": "Matomo Token",
-            "type": "string"
-          },
-          "matomo_site_id": {
-            "default": 1,
-            "title": "Matomo Site Id",
-            "type": "integer"
-          },
           "matomo_segment": {
             "default": "",
             "title": "Matomo Segment",
             "type": "string"
-          },
-          "blog_url": {
-            "default": "",
-            "title": "Blog Url",
-            "type": "string"
-          },
-          "blog_site_id": {
-            "default": 0,
-            "title": "Blog Site Id",
-            "type": "integer"
           },
           "utm_source_dim_id": {
             "default": 0,
@@ -389,8 +384,200 @@
         "title": "SaveSettingsParams",
         "type": "object"
       },
-      "return_schema": {},
+      "return_schema": {
+        "properties": {
+          "saved_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Saved Keys",
+            "type": "array"
+          }
+        },
+        "title": "SavedKeysResponse",
+        "type": "object"
+      },
       "event": "analytics.settings.saved",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "add_site",
+      "description": "Add a site/project to track — each Matomo account can track multiple websites under different site IDs. Use for: добавь сайт, новый проект, add another site, track my blog separately, добавить ещё один сайт.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "update:settings"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "label": {
+            "description": "Display name for this site/project, e.g. 'Main Website' or 'Blog'.",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "site_id": {
+            "description": "The Matomo site ID (idSite) to track under this label.",
+            "minimum": 1,
+            "title": "Site Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "site_id"
+        ],
+        "title": "AddSiteParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SiteEntry": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "site_id": {
+                "default": 0,
+                "title": "Site Id",
+                "type": "integer"
+              }
+            },
+            "title": "SiteEntry",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "sites": {
+            "items": {
+              "$ref": "#/$defs/SiteEntry"
+            },
+            "title": "Sites",
+            "type": "array"
+          }
+        },
+        "title": "SitesListResponse",
+        "type": "object"
+      },
+      "event": "analytics.settings.saved",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "remove_site",
+      "description": "Remove a tracked site/project by its label (from list_sites).",
+      "action_type": "destructive",
+      "chain_callable": true,
+      "effects": [
+        "update:settings"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "label": {
+            "description": "Label of the site to remove, as shown by list_sites.",
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "RemoveSiteParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SiteEntry": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "site_id": {
+                "default": 0,
+                "title": "Site Id",
+                "type": "integer"
+              }
+            },
+            "title": "SiteEntry",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "sites": {
+            "items": {
+              "$ref": "#/$defs/SiteEntry"
+            },
+            "title": "Sites",
+            "type": "array"
+          }
+        },
+        "title": "SitesListResponse",
+        "type": "object"
+      },
+      "event": "analytics.settings.saved",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "list_sites",
+      "description": "List all sites/projects configured for this Matomo account. Use for: какие сайты подключены, список проектов, list my sites.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "description": "No input needed.",
+        "properties": {},
+        "title": "ListSitesParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SiteEntry": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "site_id": {
+                "default": 0,
+                "title": "Site Id",
+                "type": "integer"
+              }
+            },
+            "title": "SiteEntry",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "sites": {
+            "items": {
+              "$ref": "#/$defs/SiteEntry"
+            },
+            "title": "Sites",
+            "type": "array"
+          }
+        },
+        "title": "SitesListResponse",
+        "type": "object"
+      },
+      "event": "",
       "background": false,
       "long_running": false,
       "scopes": [],
@@ -404,7 +591,14 @@
       "effects": [],
       "id_projection": "",
       "params_schema": {
-        "properties": {},
+        "properties": {
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
+          }
+        },
         "title": "_EmptyParams",
         "type": "object"
       },
@@ -493,6 +687,12 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
         "title": "_PeriodParams",
@@ -500,54 +700,38 @@
       },
       "return_schema": {
         "$defs": {
-          "LiveVisitorsWindow": {
+          "SimpleBreakdownRecord": {
             "properties": {
-              "visitors": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
                 "default": 0,
-                "title": "Visitors",
+                "title": "Visits",
                 "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
               }
             },
-            "title": "LiveVisitorsWindow",
+            "title": "SimpleBreakdownRecord",
             "type": "object"
           }
         },
         "properties": {
-          "live_30m": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/LiveVisitorsWindow"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null
-          },
-          "live_60m": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/LiveVisitorsWindow"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null
-          },
-          "live_180m": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/LiveVisitorsWindow"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
           }
         },
-        "title": "LiveVisitorsResponse",
+        "title": "BreakdownResponse",
         "type": "object"
       },
       "event": "analytics.action.result",
@@ -583,6 +767,12 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
         "title": "_PeriodParams",
@@ -657,6 +847,12 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
         "title": "_PeriodParams",
@@ -664,54 +860,38 @@
       },
       "return_schema": {
         "$defs": {
-          "LiveVisitorsWindow": {
+          "SimpleBreakdownRecord": {
             "properties": {
-              "visitors": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
                 "default": 0,
-                "title": "Visitors",
+                "title": "Visits",
                 "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
               }
             },
-            "title": "LiveVisitorsWindow",
+            "title": "SimpleBreakdownRecord",
             "type": "object"
           }
         },
         "properties": {
-          "live_30m": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/LiveVisitorsWindow"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null
-          },
-          "live_60m": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/LiveVisitorsWindow"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null
-          },
-          "live_180m": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/LiveVisitorsWindow"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
           }
         },
-        "title": "LiveVisitorsResponse",
+        "title": "BreakdownResponse",
         "type": "object"
       },
       "event": "analytics.action.result",
@@ -747,20 +927,107 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
         "title": "_PeriodParams",
         "type": "object"
       },
       "return_schema": {
-        "properties": {
-          "data": {
-            "additionalProperties": true,
-            "title": "Data",
+        "$defs": {
+          "PageMetricRecord": {
+            "properties": {
+              "url": {
+                "default": "",
+                "title": "Url",
+                "type": "string"
+              },
+              "title": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Title"
+              },
+              "views": {
+                "default": 0,
+                "title": "Views",
+                "type": "integer"
+              },
+              "visits": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Visits"
+              },
+              "bounce_rate": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Bounce Rate"
+              },
+              "avg_time_on_page": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Avg Time On Page"
+              }
+            },
+            "title": "PageMetricRecord",
             "type": "object"
           }
         },
-        "title": "AnalyticsScalarResponse",
+        "properties": {
+          "entry_pages": {
+            "items": {
+              "$ref": "#/$defs/PageMetricRecord"
+            },
+            "title": "Entry Pages",
+            "type": "array"
+          },
+          "exit_pages": {
+            "items": {
+              "$ref": "#/$defs/PageMetricRecord"
+            },
+            "title": "Exit Pages",
+            "type": "array"
+          }
+        },
+        "title": "EntryExitResponse",
         "type": "object"
       },
       "event": "",
@@ -777,7 +1044,14 @@
       "effects": [],
       "id_projection": "",
       "params_schema": {
-        "properties": {},
+        "properties": {
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
+          }
+        },
         "title": "_EmptyParams",
         "type": "object"
       },
@@ -851,7 +1125,14 @@
       "effects": [],
       "id_projection": "",
       "params_schema": {
-        "properties": {},
+        "properties": {
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
+          }
+        },
         "title": "_EmptyParams",
         "type": "object"
       },
@@ -885,7 +1166,14 @@
       "effects": [],
       "id_projection": "",
       "params_schema": {
-        "properties": {},
+        "properties": {
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
+          }
+        },
         "title": "_EmptyParams",
         "type": "object"
       },
@@ -942,48 +1230,6 @@
       "owner_chat_tool": "analytics"
     },
     {
-      "name": "blog_analytics",
-      "description": "Traffic and top content for the blog subdomain only (e.g. blog.example.com). Filters Matomo to blog pages, shows top articles, traffic, trends. Use for: аналитика блога, топ статьи, трафик блога, blog traffic, which articles perform best, блог статистика, blog.webhostmost.com, контент который читают.",
-      "action_type": "read",
-      "chain_callable": true,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "month",
-            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
-            "title": "Date",
-            "type": "string"
-          }
-        },
-        "title": "_BlogParams",
-        "type": "object"
-      },
-      "return_schema": {
-        "properties": {
-          "data": {
-            "additionalProperties": true,
-            "title": "Data",
-            "type": "object"
-          }
-        },
-        "title": "AnalyticsScalarResponse",
-        "type": "object"
-      },
-      "event": "analytics.action.result",
-      "background": false,
-      "long_running": false,
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
       "name": "ai_referrers",
       "description": "Which AI assistants and LLMs send traffic — ChatGPT, Perplexity, Claude, Gemini, DeepSeek, Grok, Copilot. Combines referrer detection + UTM tracking. Default period=month for meaningful data. Use for: с каких нейросетей трафик, ChatGPT traffic, AI referrers, нейронки шлют трафик, which AI sends visitors, LLM traffic.",
       "action_type": "read",
@@ -1003,9 +1249,15 @@
             "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AIReferrersParams",
+        "title": "AIReferrersParams",
         "type": "object"
       },
       "return_schema": {
@@ -1075,9 +1327,15 @@
             "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_ConversionsParams",
+        "title": "ConversionsParams",
         "type": "object"
       },
       "return_schema": {
@@ -1190,9 +1448,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1203,6 +1467,11 @@
                 "default": "",
                 "title": "Action",
                 "type": "string"
+              },
+              "events": {
+                "default": 0,
+                "title": "Events",
+                "type": "integer"
               }
             },
             "title": "EventActionRecord",
@@ -1282,18 +1551,24 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
         "$defs": {
           "UTMSourceRecord": {
             "properties": {
-              "source": {
+              "label": {
                 "default": "",
-                "title": "Source",
+                "title": "Label",
                 "type": "string"
               },
               "visits": {
@@ -1312,6 +1587,11 @@
                 ],
                 "default": null,
                 "title": "Percent"
+              },
+              "is_ai": {
+                "default": false,
+                "title": "Is Ai",
+                "type": "boolean"
               }
             },
             "title": "UTMSourceRecord",
@@ -1333,6 +1613,156 @@
           }
         },
         "title": "UTMSourcesResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "new_vs_returning",
+      "description": "New visitors vs returning visitors ratio and counts. Use for: новые vs возвращающиеся, лояльность аудитории, сколько новых пользователей, retention, returning users percentage.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
+          }
+        },
+        "title": "AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "new_visits": {
+            "default": 0,
+            "title": "New Visits",
+            "type": "integer"
+          },
+          "returning_visits": {
+            "default": 0,
+            "title": "Returning Visits",
+            "type": "integer"
+          },
+          "new_percent": {
+            "default": 0.0,
+            "title": "New Percent",
+            "type": "number"
+          },
+          "returning_percent": {
+            "default": 0.0,
+            "title": "Returning Percent",
+            "type": "number"
+          }
+        },
+        "title": "NewReturningResponse",
+        "type": "object"
+      },
+      "event": "analytics.action.result",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
+      "name": "visit_duration",
+      "description": "Session duration distribution buckets.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
+            "title": "Period",
+            "type": "string"
+          },
+          "date": {
+            "default": "today",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "title": "Date",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
+          }
+        },
+        "title": "AudienceParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SimpleBreakdownRecord": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "visits": {
+                "default": 0,
+                "title": "Visits",
+                "type": "integer"
+              },
+              "percent": {
+                "default": 0.0,
+                "title": "Percent",
+                "type": "number"
+              }
+            },
+            "title": "SimpleBreakdownRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BreakdownResponse",
         "type": "object"
       },
       "event": "analytics.action.result",
@@ -1368,9 +1798,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1442,9 +1878,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1516,9 +1958,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1546,15 +1994,22 @@
           }
         },
         "properties": {
-          "items": {
+          "browsers": {
             "items": {
               "$ref": "#/$defs/SimpleBreakdownRecord"
             },
-            "title": "Items",
+            "title": "Browsers",
+            "type": "array"
+          },
+          "os_families": {
+            "items": {
+              "$ref": "#/$defs/SimpleBreakdownRecord"
+            },
+            "title": "Os Families",
             "type": "array"
           }
         },
-        "title": "BreakdownResponse",
+        "title": "BrowsersResponse",
         "type": "object"
       },
       "event": "analytics.action.result",
@@ -1590,9 +2045,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1664,9 +2125,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1738,9 +2205,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1812,9 +2285,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1886,9 +2365,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1960,9 +2445,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -1990,163 +2481,22 @@
           }
         },
         "properties": {
-          "items": {
+          "keywords": {
             "items": {
               "$ref": "#/$defs/SimpleBreakdownRecord"
             },
-            "title": "Items",
+            "title": "Keywords",
             "type": "array"
-          }
-        },
-        "title": "BreakdownResponse",
-        "type": "object"
-      },
-      "event": "analytics.action.result",
-      "background": false,
-      "long_running": false,
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "new_vs_returning",
-      "description": "New visitors vs returning visitors ratio and counts. Use for: новые vs возвращающиеся, лояльность аудитории, сколько новых пользователей, retention, returning users percentage.",
-      "action_type": "read",
-      "chain_callable": true,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
-            "title": "Period",
-            "type": "string"
           },
-          "date": {
-            "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "maximum": 100,
-            "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {
-        "$defs": {
-          "SimpleBreakdownRecord": {
-            "properties": {
-              "label": {
-                "default": "",
-                "title": "Label",
-                "type": "string"
-              },
-              "visits": {
-                "default": 0,
-                "title": "Visits",
-                "type": "integer"
-              },
-              "percent": {
-                "default": 0.0,
-                "title": "Percent",
-                "type": "number"
-              }
-            },
-            "title": "SimpleBreakdownRecord",
-            "type": "object"
-          }
-        },
-        "properties": {
-          "items": {
+          "no_results": {
             "items": {
               "$ref": "#/$defs/SimpleBreakdownRecord"
             },
-            "title": "Items",
+            "title": "No Results",
             "type": "array"
           }
         },
-        "title": "BreakdownResponse",
-        "type": "object"
-      },
-      "event": "analytics.action.result",
-      "background": false,
-      "long_running": false,
-      "scopes": [],
-      "owner_chat_tool": "analytics"
-    },
-    {
-      "name": "visit_duration",
-      "description": "Session duration distribution buckets.",
-      "action_type": "read",
-      "chain_callable": true,
-      "effects": [],
-      "id_projection": "",
-      "params_schema": {
-        "properties": {
-          "period": {
-            "default": "week",
-            "description": "Granularity: day, week, month, year, or range (for custom date spans). Use 'range' when the user specifies a specific start and end date.",
-            "title": "Period",
-            "type": "string"
-          },
-          "date": {
-            "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
-            "title": "Date",
-            "type": "string"
-          },
-          "limit": {
-            "default": 20,
-            "maximum": 100,
-            "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "_AudienceParams",
-        "type": "object"
-      },
-      "return_schema": {
-        "$defs": {
-          "SimpleBreakdownRecord": {
-            "properties": {
-              "label": {
-                "default": "",
-                "title": "Label",
-                "type": "string"
-              },
-              "visits": {
-                "default": 0,
-                "title": "Visits",
-                "type": "integer"
-              },
-              "percent": {
-                "default": 0.0,
-                "title": "Percent",
-                "type": "number"
-              }
-            },
-            "title": "SimpleBreakdownRecord",
-            "type": "object"
-          }
-        },
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/$defs/SimpleBreakdownRecord"
-            },
-            "title": "Items",
-            "type": "array"
-          }
-        },
-        "title": "BreakdownResponse",
+        "title": "SiteSearchResponse",
         "type": "object"
       },
       "event": "analytics.action.result",
@@ -2182,9 +2532,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -2256,9 +2612,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -2330,9 +2692,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -2404,9 +2772,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -2478,9 +2852,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -2552,9 +2932,15 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "site": {
+            "default": "",
+            "description": "Which site/project to report on - a label from list_sites (e.g. 'Main Website', 'Blog'). Omit to use the user's default site.",
+            "title": "Site",
+            "type": "string"
           }
         },
-        "title": "_AudienceParams",
+        "title": "AudienceParams",
         "type": "object"
       },
       "return_schema": {
@@ -2583,7 +2969,7 @@
     }
   ],
   "required_scopes": [],
-  "icon_size_bytes": 389,
+  "icon_size_bytes": 1087,
   "exposed": [
     {
       "name": "traffic",
@@ -2649,7 +3035,29 @@
       "signature": "(ctx)"
     }
   },
+  "secrets": [
+    {
+      "name": "matomo_url",
+      "description": "Your Matomo instance URL, e.g. https://analytics.example.com",
+      "required": true,
+      "write_mode": "user",
+      "max_bytes": 500
+    },
+    {
+      "name": "matomo_token",
+      "description": "Matomo Auth Token — Matomo → Personal → Security → Auth tokens",
+      "required": true,
+      "write_mode": "user",
+      "max_bytes": 200
+    }
+  ],
   "panels": [
+    {
+      "panel_id": "secrets",
+      "slot": "right",
+      "title": "Secrets",
+      "tree": {}
+    },
     {
       "panel_id": "sidebar",
       "slot": "left",
