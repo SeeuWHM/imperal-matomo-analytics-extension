@@ -159,7 +159,7 @@ async def ipc_real_time(ctx, site: str = "") -> ActionResult:
     data = await call_mos(ctx, "/api/matomo-analytics/real-time", {}, site=site)
     if "error" in data:
         return _err(data)
-    return ActionResult.success(data=data)
+    return ActionResult.success(data=data, summary="Real-time visitor counts fetched.")
 
 
 @ext.expose("sources")
@@ -168,7 +168,7 @@ async def ipc_sources(ctx, period: str = "week", date: str = "today", site: str 
     data = await call_mos(ctx, "/api/matomo-analytics/sources", {"period": period, "date": date}, site=site)
     if "error" in data:
         return _err(data)
-    return ActionResult.success(data=data)
+    return ActionResult.success(data=data, summary="Traffic sources fetched.")
 
 
 @ext.expose("devices")
@@ -177,7 +177,7 @@ async def ipc_devices(ctx, period: str = "week", date: str = "today", site: str 
     data = await call_mos(ctx, "/api/matomo-analytics/devices", {"period": period, "date": date}, site=site)
     if "error" in data:
         return _err(data)
-    return ActionResult.success(data=data)
+    return ActionResult.success(data=data, summary="Device breakdown fetched.")
 
 
 @ext.expose("geo")
@@ -188,4 +188,4 @@ async def ipc_geo(ctx, period: str = "week", date: str = "today", limit: int = 1
     }, site=site)
     if "error" in data:
         return _err(data)
-    return ActionResult.success(data=data)
+    return ActionResult.success(data=data, summary="Geo breakdown fetched.")

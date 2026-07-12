@@ -71,3 +71,25 @@ class RemoveSiteParams(BaseModel):
 class ListSitesParams(BaseModel):
     """No input needed."""
     pass
+
+
+# ─── Audience / channel breakdown params — shared across handlers_audience.py
+# and handlers_channels.py (split apart to stay under the 300-line file limit) ──
+
+class AudienceParams(BaseModel):
+    period: str = Field(default="week", description=_PERIOD_HELP)
+    date: str   = Field(default="today", description=_DATE_HELP)
+    limit: int  = Field(default=20, ge=1, le=100)
+    site: str   = Field(default="", description=_SITE_HELP)
+
+
+class AIReferrersParams(BaseModel):
+    period: str = Field(default="month", description=_PERIOD_HELP)
+    date: str   = Field(default="today", description=_DATE_HELP)
+    site: str   = Field(default="", description=_SITE_HELP)
+
+
+class ConversionsParams(BaseModel):
+    period: str = Field(default="month", description=_PERIOD_HELP)
+    date: str   = Field(default="today", description=_DATE_HELP)
+    site: str   = Field(default="", description=_SITE_HELP)

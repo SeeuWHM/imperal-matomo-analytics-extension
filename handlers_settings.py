@@ -5,6 +5,7 @@ from imperal_sdk.types import ActionResult
 
 from app import chat, save_settings, load_settings
 from params import SaveSettingsParams, AddSiteParams, RemoveSiteParams, ListSitesParams
+from response_models import SavedKeysResponse, SitesListResponse
 
 
 @chat.function(
@@ -15,6 +16,7 @@ from params import SaveSettingsParams, AddSiteParams, RemoveSiteParams, ListSite
     chain_callable=True,
     effects=["update:settings"],
     event="analytics.settings.saved",
+    data_model=SavedKeysResponse,
 )
 async def fn_save_settings(ctx, params: SaveSettingsParams) -> ActionResult:
     """Persist form values. Blank fields keep their current value -
@@ -41,6 +43,7 @@ async def fn_save_settings(ctx, params: SaveSettingsParams) -> ActionResult:
     chain_callable=True,
     effects=["update:settings"],
     event="analytics.settings.saved",
+    data_model=SitesListResponse,
 )
 async def fn_add_site(ctx, params: AddSiteParams) -> ActionResult:
     """Add (or replace, if the label already exists) a site/project entry."""
@@ -61,6 +64,7 @@ async def fn_add_site(ctx, params: AddSiteParams) -> ActionResult:
     chain_callable=True,
     effects=["update:settings"],
     event="analytics.settings.saved",
+    data_model=SitesListResponse,
 )
 async def fn_remove_site(ctx, params: RemoveSiteParams) -> ActionResult:
     """Remove a site/project entry by label."""
@@ -82,6 +86,7 @@ async def fn_remove_site(ctx, params: RemoveSiteParams) -> ActionResult:
     description="List all sites/projects configured for this Matomo account. "
                 "Use for: какие сайты подключены, список проектов, list my sites.",
     action_type="read",
+    data_model=SitesListResponse,
 )
 async def fn_list_sites(ctx, params: ListSitesParams) -> ActionResult:
     """List configured sites/projects."""

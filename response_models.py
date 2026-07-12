@@ -168,3 +168,7 @@ class SiteEntry(BaseModel):
 
 class SitesListResponse(BaseModel):
     sites: list[SiteEntry] = Field(default_factory=list)
+
+
+class SavedKeysResponse(BaseModel):
+    saved_keys: list[str] = Field(default_factory=list)

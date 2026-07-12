@@ -26,7 +26,7 @@ import handlers_audience
 import app as app_module
 from params import (
     TrafficParams, TopPagesParams, TrendsParams, SaveSettingsParams,
-    AddSiteParams, RemoveSiteParams, ListSitesParams,
+    AddSiteParams, RemoveSiteParams, ListSitesParams, ConversionsParams,
 )
 
 
@@ -266,7 +266,7 @@ async def test_conversions_no_named_goals_shows_message(monkeypatch):
 
     monkeypatch.setattr(handlers_audience, "call_mos", fake_call)
     result = await handlers_audience.fn_conversions(
-        ctx=_ctx(), params=handlers_audience._ConversionsParams(),
+        ctx=_ctx(), params=ConversionsParams(),
     )
     assert result.status == "success"
     assert "No goals" in result.summary

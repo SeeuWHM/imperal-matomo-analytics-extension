@@ -162,7 +162,7 @@ async def ipc_insights(ctx, site: str = "") -> ActionResult:
     data = await call_mos(ctx, "/api/matomo-analytics/insights", {}, site=site)
     if "error" in data:
         return _err(data)
-    return ActionResult.success(data=data)
+    return ActionResult.success(data=data, summary="Insights fetched.")
 
 
 @ext.expose("daily_summary")
@@ -174,6 +174,7 @@ async def ipc_daily_summary(ctx, site: str = "") -> ActionResult:
     for d in (traffic, trends, insights):
         if "error" in d:
             return _err(d)
-    return ActionResult.success(data={
-        "traffic": traffic, "trends": trends, "insights": insights,
-    })
+    return ActionResult.success(
+        data={"traffic": traffic, "trends": trends, "insights": insights},
+        summary="Daily summary facts fetched.",
+    )

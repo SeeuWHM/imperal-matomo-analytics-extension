@@ -20,8 +20,9 @@ from app import ext, load_settings, load_result, matomo_ready
 from api_client import call_mos
 from panels_render import (
     kpi_stats, chart, insights_cards, pages_table,
-    breakdown_table, entry_exit_table, settings_form, result_zone,
+    breakdown_table, entry_exit_table, result_zone,
 )
+from panels_settings_render import settings_form
 
 
 # ─────────────────────── Left sidebar ─────────────────────

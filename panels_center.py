@@ -7,7 +7,8 @@ from imperal_sdk import ui
 
 from app import ext, load_settings, matomo_ready
 from api_client import call_mos
-from panels_render import kpi_stats, chart, pages_table, breakdown_table, settings_form
+from panels_render import kpi_stats, chart, pages_table, breakdown_table
+from panels_settings_render import settings_form
 
 
 REFRESH = "on_event:analytics.action.result"

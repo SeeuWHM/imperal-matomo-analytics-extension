@@ -8,23 +8,28 @@ _dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _dir)
 
 for _m in list(sys.modules):
-    if _m in ("app", "api_client", "params", "skeleton",
+    if _m in ("app", "api_client", "params", "skeleton", "audience_helpers",
               "handlers_traffic", "handlers_settings",
               "handlers_detail", "handlers_insights",
-              "handlers_audience",
-              "panels_render", "panels_side", "panels_center"):
+              "handlers_audience", "handlers_channels",
+              "handlers_demographics", "handlers_reports",
+              "panels_render", "panels_settings_render",
+              "panels_side", "panels_center"):
         del sys.modules[_m]
 
 from app import ext, chat  # noqa: E402, F401
 
-import skeleton            # noqa: E402, F401
-import handlers_traffic    # noqa: E402, F401
-import handlers_settings   # noqa: E402, F401
-import handlers_detail     # noqa: E402, F401
-import handlers_insights   # noqa: E402, F401
-import handlers_audience   # noqa: E402, F401
-import panels_side         # noqa: E402, F401
-import panels_center       # noqa: E402, F401
+import skeleton              # noqa: E402, F401
+import handlers_traffic      # noqa: E402, F401
+import handlers_settings     # noqa: E402, F401
+import handlers_detail       # noqa: E402, F401
+import handlers_insights     # noqa: E402, F401
+import handlers_audience     # noqa: E402, F401
+import handlers_channels     # noqa: E402, F401
+import handlers_demographics # noqa: E402, F401
+import handlers_reports      # noqa: E402, F401
+import panels_side           # noqa: E402, F401
+import panels_center         # noqa: E402, F401
 
 
 # Daily summary schedule - fires in-app notification if there are any
@@ -83,8 +88,12 @@ async def health(ctx):
     from imperal_sdk.types import ActionResult
     from app import ext, load_settings, matomo_ready
     s = await load_settings(ctx)
-    return ActionResult.success(data={
-        "version": ext.version,
-        "matomo_configured": matomo_ready(s),
-        "sites_configured": len(s.get("sites") or []),
-    })
+    configured = matomo_ready(s)
+    return ActionResult.success(
+        data={
+            "version": ext.version,
+            "matomo_configured": configured,
+            "sites_configured": len(s.get("sites") or []),
+        },
+        summary="Matomo connected." if configured else "Matomo not configured.",
+    )

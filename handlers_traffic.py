@@ -122,7 +122,7 @@ async def ipc_traffic(ctx, period: str = "day", date: str = "last7", site: str =
     data = await call_mos(ctx, "/api/matomo-analytics/traffic", {"period": period, "date": date}, site=site)
     if "error" in data:
         return _err(data)
-    return ActionResult.success(data=data)
+    return ActionResult.success(data=data, summary="Traffic summary fetched.")
 
 
 @ext.expose("trends")
@@ -131,7 +131,7 @@ async def ipc_trends(ctx, site: str = "") -> ActionResult:
     data = await call_mos(ctx, "/api/matomo-analytics/trends", {}, site=site)
     if "error" in data:
         return _err(data)
-    return ActionResult.success(data=data)
+    return ActionResult.success(data=data, summary="Week-over-week trend fetched.")
 
 
 @ext.expose("top_pages")
@@ -142,7 +142,7 @@ async def ipc_top_pages(ctx, period: str = "month", date: str = "today", limit: 
     }, site=site)
     if "error" in data:
         return _err(data)
-    return ActionResult.success(data=data)
+    return ActionResult.success(data=data, summary="Top pages fetched.")
 
 
 @ext.expose("growing_pages")
@@ -174,7 +174,10 @@ async def ipc_growing_pages(ctx, limit: int = 20, site: str = "") -> ActionResul
             growth_pct = 100.0 if views else 0.0
         pages.append({"url": p.get("url", ""), "visits": views, "growth_pct": growth_pct})
     pages.sort(key=lambda p: p["growth_pct"], reverse=True)
-    return ActionResult.success(data={"pages": pages, "count": len(pages)})
+    return ActionResult.success(
+        data={"pages": pages, "count": len(pages)},
+        summary=f"{len(pages)} growing pages fetched.",
+    )
 
 
 @ext.expose("ai_referrers")
@@ -185,7 +188,7 @@ async def ipc_ai_referrers(ctx, period: str = "month", site: str = "") -> Action
     }, site=site)
     if "error" in data:
         return _err(data)
-    return ActionResult.success(data=data)
+    return ActionResult.success(data=data, summary="AI referrer traffic fetched.")
 
 
 @ext.expose("matomo_config")
@@ -195,8 +198,11 @@ async def ipc_matomo_config(ctx) -> ActionResult:
     s = await load_settings(ctx)
     if not matomo_ready(s):
         return ActionResult.error(error="Matomo not configured in Analytics extension.")
-    return ActionResult.success(data={
-        "configured": True,
-        "sites": s.get("sites", []),
-        "matomo_segment": s.get("matomo_segment", ""),
-    })
+    return ActionResult.success(
+        data={
+            "configured": True,
+            "sites": s.get("sites", []),
+            "matomo_segment": s.get("matomo_segment", ""),
+        },
+        summary="Matomo connection status shared.",
+    )

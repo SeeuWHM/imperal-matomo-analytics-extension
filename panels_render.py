@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from imperal_sdk import ui
 
-from app import matomo_ready
-
 
 SEV_TYPE = {"critical": "error", "warning": "warn", "info": "info"}
 
@@ -263,71 +261,3 @@ def result_zone(result_doc: dict | None) -> ui.UINode:
     title = result_doc.get("title") or _RESULT_LABELS.get(action, "Result")
     body = _render_result_body(action, result_doc.get("data") or {})
     return ui.Section(title=f"↳ {title}", children=[body])
-
-
-def sites_list(s: dict) -> ui.UINode:
-    """Manage which Matomo site_ids are tracked as named projects."""
-    sites = s.get("sites") or []
-    rows = [{"label": site.get("label", "-"), "site_id": str(site.get("site_id", "-"))}
-            for site in sites]
-    table = ui.DataTable(
-        columns=[
-            ui.DataColumn(key="label", label="Site / project", width="60%"),
-            ui.DataColumn(key="site_id", label="Matomo site_id", width="40%"),
-        ],
-        rows=rows,
-    ) if rows else ui.Empty(message="No sites yet - add one below.")
-
-    add_form = ui.Form(
-        action="add_site",
-        submit_label="Add site",
-        children=[
-            ui.Input(placeholder="Label - e.g. Main Website, Blog, Docs", param_name="label"),
-            ui.Input(placeholder="Matomo site_id - e.g. 1", param_name="site_id"),
-        ],
-    )
-    remove_form = ui.Form(
-        action="remove_site",
-        submit_label="Remove site",
-        children=[
-            ui.Input(placeholder="Label to remove", param_name="label"),
-        ],
-    ) if rows else None
-
-    children = [table, add_form]
-    if remove_form:
-        children.append(remove_form)
-    return ui.Stack(children=children)
-
-
-def settings_form(s: dict) -> ui.UINode:
-    status = ui.Badge(
-        label="Matomo connected" if matomo_ready(s) else "Matomo not configured",
-        color="green" if matomo_ready(s) else "red",
-    )
-    form = ui.Form(
-        action="save_settings",
-        submit_label="Save settings",
-        children=[
-            ui.Input(placeholder="Segment (optional) - pageUrl=^https://blog.example.com",
-                     value=s.get("matomo_segment", ""), param_name="matomo_segment"),
-            ui.Input(placeholder="UTM source Dimension ID (optional) - e.g. 8",
-                     value=str(s.get("utm_source_dim_id") or ""), param_name="utm_source_dim_id"),
-        ],
-    )
-    return ui.Stack(children=[
-        status,
-        ui.Text(
-            content=("Matomo URL and Auth Token are entered in the platform's Secrets "
-                     "panel (not here) - they're stored in the platform's secrets vault, "
-                     "never in this extension's own data."),
-            variant="caption",
-        ),
-        ui.Divider(),
-        ui.Text(content="Sites / projects", variant="caption"),
-        sites_list(s),
-        ui.Divider(),
-        form,
-        ui.Text(content="Leave a field blank to keep the current value.",
-                variant="caption"),
-    ])
