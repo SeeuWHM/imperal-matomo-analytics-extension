@@ -19,24 +19,24 @@ User → Imperal Panel
        │
        │ HTTPS + X-API-Key
        ▼
-[ mos.lexa-lox.xyz ]             ← shared FastAPI server (outside this repo)
+[ shared backend bridge ]        ← shared FastAPI microservice / bridge
        │
        │ token_auth + segment
        ▼
 [ user's Matomo instance ]       ← any Matomo, user supplies URL/token in Settings
 ```
 
-The extension itself is small and contains **no Matomo logic** — it just renders a dashboard and forwards requests to a shared server. The server does the actual Matomo API talking. If AI quota runs out, the dashboard still works (the chat goes away, panels keep rendering).
+The extension itself is small and contains **no Matomo logic** — it just renders a dashboard and forwards requests to a shared backend bridge. The bridge does the actual Matomo API talking. Users only configure their own Matomo connection; they do not configure the bridge itself. If AI quota runs out, the dashboard still works (the chat goes away, panels keep rendering).
 
 **Why the split?** Scripts, not tokens. The server is pure Python + HTTP. It runs even without an LLM. The extension is the UI.
 
 ## Install
 
 1. Marketplace → search *Analytics* → Install.
-2. Settings panel (right side):
-   - **Server URL:** `https://mos.lexa-lox.xyz` (default)
-   - **Server API Key:** save it as the Imperal app secret `MATOMO_BACKEND_API_KEY`
-   - **Backend URL:** save it as the Imperal app secret `MATOMO_BACKEND_URL`
+2. App/deploy secrets (shared for all installs of this app):
+   - `MATOMO_BACKEND_URL` — the shared backend bridge URL, e.g. `https://api.webhostmost.com`
+   - `MATOMO_BACKEND_API_KEY` — the shared backend bridge API key
+3. User Settings panel (right side):
    - **Matomo URL:** e.g. `https://analytics.example.com`
    - **Auth Token:** from Matomo → Personal → Security → Auth tokens
    - **Site ID:** integer (default 1)
