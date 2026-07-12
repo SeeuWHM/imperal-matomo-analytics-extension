@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from imperal_sdk import ui
 
-from app import matomo_ready
+from app import ext, matomo_ready
 
 
 def sites_list(s: dict) -> ui.UINode:
@@ -43,9 +43,15 @@ def sites_list(s: dict) -> ui.UINode:
 
 
 def settings_form(s: dict) -> ui.UINode:
+    ready = matomo_ready(s)
     status = ui.Badge(
-        label="Matomo connected" if matomo_ready(s) else "Matomo not configured",
-        color="green" if matomo_ready(s) else "red",
+        label="Matomo connected" if ready else "Matomo not configured",
+        color="green" if ready else "red",
+    )
+    open_secrets = ui.Button(
+        label="Set Matomo URL + Auth Token" if not ready else "Manage Matomo credentials",
+        variant="primary" if not ready else "secondary",
+        on_click=ui.Navigate(path=f"/ext/{ext.app_id}/secrets"),
     )
     form = ui.Form(
         action="save_settings",
@@ -60,11 +66,11 @@ def settings_form(s: dict) -> ui.UINode:
     return ui.Stack(children=[
         status,
         ui.Text(
-            content=("Matomo URL and Auth Token are entered in the platform's Secrets "
-                     "panel (not here) - they're stored in the platform's secrets vault, "
-                     "never in this extension's own data."),
+            content=("Matomo URL and Auth Token live in the platform's encrypted Secrets "
+                     "vault, never in this extension's own data - click below to set them."),
             variant="caption",
         ),
+        open_secrets,
         ui.Divider(),
         ui.Text(content="Sites / projects", variant="caption"),
         sites_list(s),
