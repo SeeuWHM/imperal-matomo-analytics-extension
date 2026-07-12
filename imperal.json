@@ -348,18 +348,8 @@
       ],
       "id_projection": "",
       "params_schema": {
-        "description": "Form payload - user's Matomo + backend connection settings.",
+        "description": "Form payload - user's own Matomo only. Server creds are baked-in.",
         "properties": {
-          "backend_url": {
-            "default": "",
-            "title": "Backend Url",
-            "type": "string"
-          },
-          "backend_api_key": {
-            "default": "",
-            "title": "Backend Api Key",
-            "type": "string"
-          },
           "matomo_url": {
             "default": "",
             "title": "Matomo Url",

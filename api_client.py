@@ -1,11 +1,11 @@
-"""HTTP client - calls the user's configured analytics backend.
+"""HTTP client - calls our Marketing OS server.
 
-Both backend connection details and Matomo credentials live in per-user
-settings, so every install can point at its own bridge/API server.
+Server URL and API key are baked-in constants (app.py). Only the user's
+Matomo credentials live in ctx.store.
 """
 from __future__ import annotations
 
-from app import load_settings, matomo_ready
+from app import SERVER_URL, SERVER_API_KEY, load_settings, matomo_ready
 
 TIMEOUT = 30
 HEAVY_TIMEOUT = 90  # full-report, daily-report: MOS runs 22 parallel Matomo calls
@@ -25,18 +25,12 @@ async def call_mos(ctx, endpoint: str, extra: dict | None = None, timeout: int =
     s = await load_settings(ctx)
 
     if not matomo_ready(s):
-        return {
-            "error": "Analytics backend and Matomo connection are not fully configured - open Settings and add backend URL/API key plus Matomo URL/Auth Token.",
-            "_config": True,
-        }
+        return {"error": "Matomo not configured - open Settings and add your URL + Auth Token.",
+                "_config": True}
 
-    base_url = _normalize_backend_url(s.get("backend_url", ""))
+    base_url = _normalize_backend_url(SERVER_URL)
     if not base_url:
         return {"error": "Analytics backend URL is not configured.", "_config": True}
-
-    backend_api_key = (s.get("backend_api_key", "") or "").strip()
-    if not backend_api_key:
-        return {"error": "Analytics backend API key is not configured.", "_config": True}
 
     payload = {
         "matomo_url":        s["matomo_url"],
@@ -50,7 +44,7 @@ async def call_mos(ctx, endpoint: str, extra: dict | None = None, timeout: int =
     resp = await ctx.http.post(
         f"{base_url}{endpoint}",
         json=payload,
-        headers={"X-API-Key": backend_api_key},
+        headers={"X-API-Key": SERVER_API_KEY},
         timeout=timeout,
     )
     if not resp.ok:

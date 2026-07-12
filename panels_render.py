@@ -279,13 +279,6 @@ def settings_form(s: dict) -> ui.UINode:
         action="save_settings",
         submit_label="Save settings",
         children=[
-            ui.Input(placeholder="Backend URL - https://api.example.com",
-                     value=s.get("backend_url", ""), param_name="backend_url"),
-            ui.Input(
-                placeholder=(f"Backend API Key - current {_masked(s.get('backend_api_key', ''))}"
-                             if s.get("backend_api_key") else "Backend API Key / Bearer token"),
-                value="", param_name="backend_api_key",
-            ),
             ui.Input(placeholder="Matomo URL - https://analytics.example.com",
                      value=s.get("matomo_url", ""), param_name="matomo_url"),
             ui.Input(
@@ -307,8 +300,8 @@ def settings_form(s: dict) -> ui.UINode:
     )
     return ui.Stack(children=[
         status,
-        ui.Text(content=("Your backend URL/API key and Matomo URL/Auth Token are stored encrypted per-user. "
-                         "This extension uses your own backend + your own Matomo connection."),
+        ui.Text(content=("Your Matomo URL and Auth Token are stored encrypted per-user. "
+                         "Our server bridge proxies the calls - we never persist your credentials."),
                 variant="caption"),
         ui.Divider(),
         form,
