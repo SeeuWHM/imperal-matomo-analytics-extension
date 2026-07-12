@@ -1,70 +1,34 @@
-# Imperal Analytics
+# Matomo Analytics Connector
 
-Traffic analytics dashboard for Imperal Cloud. Connect any Matomo instance, get a full-screen dashboard with visits, trends, and top pages.
+Traffic analytics dashboard for Imperal Cloud. Connect one or more Matomo instances (and even
+track a single subdomain like a blog separately via a segment), get a full dashboard with
+visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection.
 
-## What it does
+**Full technical documentation (frontend + backend, verified against the live deploy):**
+[`docs/extension.md`](docs/extension.md) — read that file for architecture, the complete
+38-function chat inventory, panels, secrets/settings model, backend routes, and known gaps.
 
-- **Central dashboard** — 4 stat cards (Today / Yesterday / Last 7d / Week Δ%), 7-day visits chart, top-10 pages table.
-- **Quick actions (left panel)** — one-click refresh, today's traffic, week trends, top pages for the month.
-- **Chat** — ask Webbee things like *"top 5 pages this month"*, *"compare traffic vs last week"*, *"how many visits today"*.
-- **IPC** — other extensions can call `ctx.extensions.call("analytics", "traffic" | "trends" | "top_pages", ...)` to pull metrics into their own dashboards (e.g. a Daily Report extension).
+## Quick facts
 
-## How it works
-
-```
-User → Imperal Panel
-       │
-       ▼
-[ analytics extension ]         ← this repo, runs inside Imperal Cloud
-       │
-       │ HTTPS + X-API-Key
-       ▼
-[ shared backend bridge ]        ← shared FastAPI microservice / bridge
-       │
-       │ token_auth + segment
-       ▼
-[ user's Matomo instance ]       ← any Matomo, user supplies URL/token in Settings
-```
-
-The extension itself is small and contains **no Matomo logic** — it just renders a dashboard and forwards requests to a shared backend bridge. The bridge does the actual Matomo API talking. Users only configure their own Matomo connection; they do not configure the bridge itself. If AI quota runs out, the dashboard still works (the chat goes away, panels keep rendering).
-
-**Why the split?** Scripts, not tokens. The server is pure Python + HTTP. It runs even without an LLM. The extension is the UI.
-
-## Install
-
-1. Marketplace → search *Analytics* → Install.
-2. App/deploy secrets (shared for all installs of this app):
-   - `MATOMO_BACKEND_URL` — the shared backend bridge URL, e.g. `https://api.webhostmost.com`
-   - `MATOMO_BACKEND_API_KEY` — the shared backend bridge API key
-3. User Settings panel (right side):
-   - **Matomo URL:** e.g. `https://analytics.example.com`
-   - **Auth Token:** from Matomo → Personal → Security → Auth tokens
-   - **Site ID:** integer (default 1)
-   - **Segment (optional):** e.g. `pageUrl=^https://blog.example.com`
+- **Version:** 5.0.0 · **app_id:** `imperal-matomo-analytics-extension` · **Tool:** `analytics`
+- Matomo URL + Auth Token are entered via the platform's own Secrets panel (EXT-SECRETS-V1,
+  per-user), not stored by the extension itself.
+- Multiple sites/projects supported — including two "projects" sharing one Matomo `site_id` via
+  a per-site segment (e.g. `label="Blog", site_id=2, segment="pageUrl=^https://blog.example.com"`).
+- Backend is a separate FastAPI service (`matomo-analytics-api`, api-server:8105, **not in this
+  repo** — edited directly on the server) that does the actual Matomo REST API calls and SSRF
+  hardening; the extension only resolves site/segment and renders results.
 
 ## Development
 
 ```bash
-pip install -e .[dev]
-imperal validate
-pytest
+source /home/ignat/Nextcloud/MCP-Configs/Imperal-Extensions-MCP/SeeU-Extensions/.venv-ext/bin/activate
+python -m pytest tests/ -v
+/home/ignat/.local/share/uv/tools/imperal-mcp/bin/imperal build .
+/home/ignat/.local/share/uv/tools/imperal-mcp/bin/imperal validate .
 ```
 
-### Files
-
-```
-main.py              entry point (hot-reload wrapper)
-app.py               Extension + ChatExtension instances, config helpers
-api_client.py        HTTP client → mos.lexa-lox.xyz
-params.py            Pydantic models
-handlers_traffic.py  chat functions (traffic, trends, top_pages) + IPC
-panels_main.py       @ext.panel("dashboard", slot="main") — central workspace
-panels_side.py       @ext.panel("sidebar", slot="left") + settings (slot="right")
-imperal.json         manifest
-tests/               unit tests with MockContext
-```
-
-All files kept ≤ 300 lines to satisfy the deploy validator.
+All files kept ≤300 lines to satisfy the deploy validator.
 
 ## License
 

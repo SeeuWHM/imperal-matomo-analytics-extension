@@ -1,7 +1,7 @@
 [project]
 name = "matomo-analytics"
-version = "4.0.6"
-description = "Matomo Analytics — traffic dashboard with visits, trends, top pages, sources, devices, AI referrers and AI insights"
+version = "5.0.0"
+description = "Matomo Analytics Connector — multi-site traffic dashboard: visits, trends, top pages, sources, devices, geo, audience insights, AI referrers and AI anomaly detection"
 requires-python = ">=3.11"
 dependencies = ["imperal-sdk>=5.0.1"]
 
@@ -10,10 +10,12 @@ dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
 
 [tool.setuptools]
 py-modules = [
-    "main", "app", "api_client", "params",
-    "handlers_traffic", "handlers_settings",
-    "handlers_detail", "handlers_insights", "handlers_audience",
-    "panels_side", "panels_render", "panels_center",
+    "main", "app", "api_client", "params", "response_models", "skeleton",
+    "audience_helpers",
+    "handlers_traffic", "handlers_settings", "handlers_detail",
+    "handlers_insights", "handlers_audience", "handlers_channels",
+    "handlers_demographics", "handlers_reports",
+    "panels_side", "panels_render", "panels_center", "panels_settings_render",
 ]
 
 [tool.pytest.ini_options]
