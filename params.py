@@ -46,7 +46,9 @@ class TrendsParams(BaseModel):
 
 
 class SaveSettingsParams(BaseModel):
-    """Form payload - user's own Matomo only. Server creds are baked-in."""
+    """Form payload - user's Matomo + backend connection settings."""
+    backend_url: str = ""
+    backend_api_key: str = ""
     matomo_url: str = ""
     matomo_token: str = ""
     matomo_site_id: int = 1

@@ -19,6 +19,10 @@ async def fn_save_settings(ctx, params: SaveSettingsParams) -> ActionResult:
     """Persist form values. Blank fields keep their current value -
     that lets users update one field at a time without retyping secrets."""
     updates: dict = {}
+    if params.backend_url:
+        updates["backend_url"] = params.backend_url.strip()
+    if params.backend_api_key:
+        updates["backend_api_key"] = params.backend_api_key.strip()
     if params.matomo_url:
         updates["matomo_url"] = params.matomo_url.strip()
     if params.matomo_token:

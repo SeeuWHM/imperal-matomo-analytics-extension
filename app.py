@@ -10,14 +10,7 @@ works on every SDK version and on MockStore.
 """
 from __future__ import annotations
 
-import os
-
 from imperal_sdk import Extension, ChatExtension
-
-# Backend connection is provided through Imperal app secrets first, with env
-# fallback for local/dev runs.
-SERVER_URL = os.environ.get("MATOMO_BACKEND_URL", "")
-SERVER_API_KEY = os.environ.get("MATOMO_BACKEND_API_KEY", "")
 
 ext = Extension(
     "imperal-matomo-analytics-extension",
@@ -61,6 +54,8 @@ RESULT_COLLECTION = "analytics_result"
 
 
 DEFAULT_SETTINGS = {
+    "backend_url": "",
+    "backend_api_key": "",
     "matomo_url": "",
     "matomo_token": "",
     "matomo_site_id": 1,
@@ -121,4 +116,9 @@ async def save_settings(ctx, values: dict) -> dict:
 
 
 def matomo_ready(s: dict) -> bool:
-    return bool(s.get("matomo_url") and s.get("matomo_token"))
+    return bool(
+        s.get("backend_url")
+        and s.get("backend_api_key")
+        and s.get("matomo_url")
+        and s.get("matomo_token")
+    )
