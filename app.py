@@ -20,7 +20,7 @@ SERVER_API_KEY = os.environ.get("MATOMO_BACKEND_API_KEY", "")
 
 ext = Extension(
     "imperal-matomo-analytics-extension",
-    version="4.0.7",
+    version="4.0.8",
     display_name="Matomo Analytics",
     description="Traffic analytics dashboard: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection from your Matomo instance.",
     icon="icon.svg",
