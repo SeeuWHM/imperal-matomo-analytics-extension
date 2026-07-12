@@ -35,7 +35,8 @@ The extension itself is small and contains **no Matomo logic** — it just rende
 1. Marketplace → search *Analytics* → Install.
 2. Settings panel (right side):
    - **Server URL:** `https://mos.lexa-lox.xyz` (default)
-   - **Server API Key:** paste from the server's `.env`
+   - **Server API Key:** save it as the Imperal app secret `MATOMO_BACKEND_API_KEY`
+   - **Backend URL:** save it as the Imperal app secret `MATOMO_BACKEND_URL`
    - **Matomo URL:** e.g. `https://analytics.example.com`
    - **Auth Token:** from Matomo → Personal → Security → Auth tokens
    - **Site ID:** integer (default 1)

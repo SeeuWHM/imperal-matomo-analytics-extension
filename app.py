@@ -14,8 +14,8 @@ import os
 
 from imperal_sdk import Extension, ChatExtension
 
-# Marketing OS server - baked into the extension. Users never see or edit
-# these: every install talks to our infra and the action counter monetises it.
+# Backend connection is provided through Imperal app secrets first, with env
+# fallback for local/dev runs.
 SERVER_URL = os.environ.get("MATOMO_BACKEND_URL", "")
 SERVER_API_KEY = os.environ.get("MATOMO_BACKEND_API_KEY", "")
 
