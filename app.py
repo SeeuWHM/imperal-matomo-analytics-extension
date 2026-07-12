@@ -166,19 +166,27 @@ def matomo_ready(s: dict) -> bool:
     return bool(s.get("matomo_url") and s.get("matomo_token"))
 
 
-def resolve_site_id(s: dict, site: str = "") -> int:
-    """Resolve a `site` label (from list_sites) to its Matomo site_id.
-    Falls back to the user's active site (set_active_site), then the first
-    configured site, then Matomo's default site 1."""
+def resolve_site(s: dict, site: str = "") -> dict:
+    """Resolve a `site` label (from list_sites) to its full config entry
+    (site_id + optional per-project `segment` override) - lets two "projects"
+    share one Matomo site_id while each tracking only its own subdomain/path
+    (e.g. label="Blog" -> site_id=2, segment="pageUrl=^https://blog.example.com").
+    Falls back to the user's active site, then the first configured site,
+    then Matomo's default site 1 with no segment override."""
     sites = s.get("sites") or []
     needle = (site or s.get("active_site") or "").strip().lower()
     if needle:
         for entry in sites:
             if str(entry.get("label", "")).strip().lower() == needle:
-                return int(entry["site_id"])
+                return entry
     if sites:
-        return int(sites[0]["site_id"])
-    return 1
+        return sites[0]
+    return {"site_id": 1}
+
+
+def resolve_site_id(s: dict, site: str = "") -> int:
+    """Resolve a `site` label (from list_sites) to its Matomo site_id."""
+    return int(resolve_site(s, site).get("site_id", 1))
 
 
 def active_site_label(s: dict) -> str:

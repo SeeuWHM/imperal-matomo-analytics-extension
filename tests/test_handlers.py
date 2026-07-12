@@ -109,6 +109,15 @@ def test_resolve_site_id_ignores_stale_active_site():
     assert app_module.resolve_site_id(s, "") == 1
 
 
+def test_resolve_site_returns_per_site_segment():
+    s = {"sites": [{"label": "Main", "site_id": 2},
+                    {"label": "Blog", "site_id": 2, "segment": "pageUrl=^https://blog.example.com"}]}
+    assert app_module.resolve_site(s, "Blog") == {
+        "label": "Blog", "site_id": 2, "segment": "pageUrl=^https://blog.example.com",
+    }
+    assert app_module.resolve_site(s, "Main").get("segment") is None
+
+
 def test_active_site_label():
     s = {"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}],
          "active_site": "Blog"}
@@ -175,6 +184,20 @@ async def test_add_site_replaces_existing_label():
 
 
 @pytest.mark.asyncio
+async def test_add_site_with_segment_scopes_a_subdomain():
+    """Two 'projects' can share one Matomo site_id - the segment carves out
+    just one subdomain (e.g. a blog) from the rest of that site's traffic."""
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 2}]})
+    result = await handlers_settings.fn_add_site(
+        ctx, AddSiteParams(label="Blog", site_id=2, segment="pageUrl=^https://blog.example.com"),
+    )
+    assert result.status == "success"
+    s = await app_module.load_settings(ctx)
+    assert s["sites"][-1] == {"label": "Blog", "site_id": 2,
+                              "segment": "pageUrl=^https://blog.example.com"}
+
+
+@pytest.mark.asyncio
 async def test_remove_site():
     ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}]})
     result = await handlers_settings.fn_remove_site(ctx, RemoveSiteParams(label="Blog"))
@@ -237,6 +260,20 @@ async def test_site_domains_success(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_site_domains_suggests_segment_per_url(monkeypatch):
+    async def fake_call(ctx, endpoint, extra=None, site=""):
+        return {"name": "Front Websites", "main_url": "https://www.example.com",
+                "urls": ["https://www.example.com", "https://blog.example.com"]}
+
+    monkeypatch.setattr(handlers_settings, "call_mos", fake_call)
+    result = await handlers_settings.fn_site_domains(_ctx(), SiteDomainsParams())
+    assert result.data["suggested_segments"] == [
+        {"domain": "https://www.example.com", "segment": "pageUrl=^https://www.example.com"},
+        {"domain": "https://blog.example.com", "segment": "pageUrl=^https://blog.example.com"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_site_domains_error(monkeypatch):
     async def fake_call(ctx, endpoint, extra=None, site=""):
         return {"error": "Matomo not configured - open Settings and add your URL + Auth Token.", "_config": True}
@@ -273,6 +310,34 @@ async def test_call_mos_resolves_site_label_to_site_id(monkeypatch):
     ctx.http.post = fake_post
     await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day"}, site="Blog")
     assert captured["site_id"] == 2
+
+
+@pytest.mark.asyncio
+async def test_call_mos_uses_per_site_segment_over_global(monkeypatch):
+    """A site's own `segment` (e.g. carving a blog subdomain out of a shared
+    site_id) must win over the account-wide matomo_segment setting."""
+    captured = {}
+
+    class _FakeResp:
+        ok = True
+        def json(self):
+            return {"ok": True}
+
+    async def fake_post(url, json, timeout):
+        captured.update(json)
+        return _FakeResp()
+
+    ctx = _ctx(store={
+        "sites": [{"label": "Main", "site_id": 2},
+                  {"label": "Blog", "site_id": 2, "segment": "pageUrl=^https://blog.example.com"}],
+        "matomo_segment": "visitorType==new",
+    })
+    ctx.http.post = fake_post
+    await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day"}, site="Blog")
+    assert captured["segment"] == "pageUrl=^https://blog.example.com"
+
+    await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day"}, site="Main")
+    assert captured["segment"] == "visitorType==new"
 
 
 @pytest.mark.asyncio

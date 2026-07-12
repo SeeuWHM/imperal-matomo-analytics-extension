@@ -62,6 +62,14 @@ class SaveSettingsParams(BaseModel):
 class AddSiteParams(BaseModel):
     label: str = Field(min_length=1, max_length=60, description="Display name for this site/project, e.g. 'Main Website' or 'Site 2'.")
     site_id: int = Field(ge=1, description="The Matomo site ID (idSite) to track under this label.")
+    segment: str = Field(
+        default="", max_length=500,
+        description="Optional Matomo segment to scope this project to part of the site instead of "
+                    "the whole thing - e.g. a subdomain that shares a Matomo site_id with other "
+                    "content. Use site_domains to see the real domains configured for a site_id, "
+                    "then pass segment=\"pageUrl=^<that domain URL>\" (e.g. "
+                    "pageUrl=^https://blog.example.com). Leave blank to track the entire site.",
+    )
 
 
 class RemoveSiteParams(BaseModel):

@@ -405,7 +405,7 @@
     },
     {
       "name": "add_site",
-      "description": "Add a site/project to track — each Matomo account can track multiple websites under different site IDs. Use for: добавь сайт, новый проект, add another site, track a second project separately, добавить ещё один сайт.",
+      "description": "Add a site/project to track — either a whole Matomo site, or a specific subdomain/section that shares a site_id with other content (via segment). Use for: добавь сайт, новый проект, add another site, track a second project separately, track just the blog/docs/forum subdomain, добавить ещё один сайт.",
       "action_type": "write",
       "chain_callable": true,
       "effects": [
@@ -426,6 +426,13 @@
             "minimum": 1,
             "title": "Site Id",
             "type": "integer"
+          },
+          "segment": {
+            "default": "",
+            "description": "Optional Matomo segment to scope this project to part of the site instead of the whole thing - e.g. a subdomain that shares a Matomo site_id with other content. Use site_domains to see the real domains configured for a site_id, then pass segment=\"pageUrl=^<that domain URL>\" (e.g. pageUrl=^https://blog.example.com). Leave blank to track the entire site.",
+            "maxLength": 500,
+            "title": "Segment",
+            "type": "string"
           }
         },
         "required": [
@@ -453,6 +460,18 @@
                 "default": false,
                 "title": "Active",
                 "type": "boolean"
+              },
+              "segment": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Segment"
               }
             },
             "title": "SiteEntry",
@@ -519,6 +538,18 @@
                 "default": false,
                 "title": "Active",
                 "type": "boolean"
+              },
+              "segment": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Segment"
               }
             },
             "title": "SiteEntry",
@@ -574,6 +605,18 @@
                 "default": false,
                 "title": "Active",
                 "type": "boolean"
+              },
+              "segment": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Segment"
               }
             },
             "title": "SiteEntry",
@@ -640,6 +683,18 @@
                 "default": false,
                 "title": "Active",
                 "type": "boolean"
+              },
+              "segment": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Segment"
               }
             },
             "title": "SiteEntry",
@@ -666,7 +721,7 @@
     },
     {
       "name": "site_domains",
-      "description": "Which domains/URLs are actually configured for a site/project in Matomo - the real main_url and every URL alias from Matomo's own SitesManager, not guessed from referrer or page traffic. Use for: какие домены привязаны к сайту, какой домен у сайта, site domains, site URLs, what domains does this site cover.",
+      "description": "Which domains/URLs are actually configured for a site/project in Matomo - the real main_url and every URL alias from Matomo's own SitesManager, not guessed from referrer or page traffic. Also suggests a ready-to-use segment for each domain, for tracking one subdomain (e.g. a blog) separately via add_site. Use for: какие домены привязаны к сайту, какой домен у сайта, site domains, site URLs, what domains does this site cover, как отследить отдельно поддомен.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -684,6 +739,24 @@
         "type": "object"
       },
       "return_schema": {
+        "$defs": {
+          "SuggestedSegment": {
+            "properties": {
+              "domain": {
+                "default": "",
+                "title": "Domain",
+                "type": "string"
+              },
+              "segment": {
+                "default": "",
+                "title": "Segment",
+                "type": "string"
+              }
+            },
+            "title": "SuggestedSegment",
+            "type": "object"
+          }
+        },
         "properties": {
           "name": {
             "default": "",
@@ -737,6 +810,13 @@
             ],
             "default": null,
             "title": "Created At"
+          },
+          "suggested_segments": {
+            "items": {
+              "$ref": "#/$defs/SuggestedSegment"
+            },
+            "title": "Suggested Segments",
+            "type": "array"
           }
         },
         "title": "SiteInfoResponse",

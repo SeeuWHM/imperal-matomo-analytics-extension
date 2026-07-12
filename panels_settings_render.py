@@ -12,13 +12,15 @@ def sites_list(s: dict) -> ui.UINode:
     sites = s.get("sites") or []
     active = active_site_label(s)
     rows = [{"label": site.get("label", "-"), "site_id": str(site.get("site_id", "-")),
+             "scope": site.get("segment") or "whole site",
              "default": "★ default" if site.get("label") == active else ""}
             for site in sites]
     table = ui.DataTable(
         columns=[
-            ui.DataColumn(key="label", label="Site / project", width="45%"),
-            ui.DataColumn(key="site_id", label="Matomo site_id", width="25%"),
-            ui.DataColumn(key="default", label="", width="30%"),
+            ui.DataColumn(key="label", label="Site / project", width="30%"),
+            ui.DataColumn(key="site_id", label="Matomo site_id", width="15%"),
+            ui.DataColumn(key="scope", label="Scope", width="35%"),
+            ui.DataColumn(key="default", label="", width="20%"),
         ],
         rows=rows,
     ) if rows else ui.Empty(message="No sites yet - add one below.")
@@ -29,6 +31,9 @@ def sites_list(s: dict) -> ui.UINode:
         children=[
             ui.Input(placeholder="Label - e.g. Main Website, Site 2", param_name="label"),
             ui.Input(placeholder="Matomo site_id - e.g. 1", param_name="site_id"),
+            ui.Input(placeholder="Segment (optional, use site_domains for suggestions) - "
+                                  "e.g. pageUrl=^https://blog.example.com",
+                     param_name="segment"),
         ],
     )
     switch_form = ui.Form(

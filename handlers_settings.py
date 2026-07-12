@@ -40,9 +40,10 @@ async def fn_save_settings(ctx, params: SaveSettingsParams) -> ActionResult:
 
 @chat.function(
     "add_site",
-    description="Add a site/project to track — each Matomo account can track multiple websites "
-                "under different site IDs. Use for: добавь сайт, новый проект, add another site, "
-                "track a second project separately, добавить ещё один сайт.",
+    description="Add a site/project to track — either a whole Matomo site, or a specific "
+                "subdomain/section that shares a site_id with other content (via segment). "
+                "Use for: добавь сайт, новый проект, add another site, track a second project "
+                "separately, track just the blog/docs/forum subdomain, добавить ещё один сайт.",
     action_type="write",
     chain_callable=True,
     effects=["update:settings"],
@@ -53,14 +54,19 @@ async def fn_add_site(ctx, params: AddSiteParams) -> ActionResult:
     """Add (or replace, if the label already exists) a site/project entry."""
     s = await load_settings(ctx)
     sites = [site for site in (s.get("sites") or []) if site.get("label", "").strip().lower() != params.label.strip().lower()]
-    sites.append({"label": params.label.strip(), "site_id": params.site_id})
+    entry = {"label": params.label.strip(), "site_id": params.site_id}
+    if params.segment.strip():
+        entry["segment"] = params.segment.strip()
+    sites.append(entry)
     updates = {"sites": sites}
     if len(sites) == 1:
         updates["active_site"] = sites[0]["label"]  # first site added becomes the default
     s = await save_settings(ctx, updates)
+    scope_note = f", segment: {entry['segment']}" if "segment" in entry else ""
     return ActionResult.success(
         data={"sites": sites_with_active(s)},
-        summary=f"Added site '{params.label}' (Matomo site_id {params.site_id}). {len(sites)} site(s) configured.",
+        summary=f"Added site '{params.label}' (Matomo site_id {params.site_id}{scope_note}). "
+                f"{len(sites)} site(s) configured.",
         refresh_panels=["sidebar", "workspace", "analytics_hub"],
     )
 
@@ -154,18 +160,27 @@ async def fn_set_active_site(ctx, params: SetActiveSiteParams) -> ActionResult:
     "site_domains",
     description="Which domains/URLs are actually configured for a site/project in Matomo - the "
                 "real main_url and every URL alias from Matomo's own SitesManager, not guessed "
-                "from referrer or page traffic. Use for: какие домены привязаны к сайту, "
-                "какой домен у сайта, site domains, site URLs, what domains does this site cover.",
+                "from referrer or page traffic. Also suggests a ready-to-use segment for each "
+                "domain, for tracking one subdomain (e.g. a blog) separately via add_site. "
+                "Use for: какие домены привязаны к сайту, какой домен у сайта, site domains, "
+                "site URLs, what domains does this site cover, как отследить отдельно поддомен.",
     action_type="read",
     data_model=SiteInfoResponse,
 )
 async def fn_site_domains(ctx, params: SiteDomainsParams) -> ActionResult:
-    """Look up the domains Matomo has configured for a site (main_url + aliases)."""
+    """Look up the domains Matomo has configured for a site (main_url + aliases),
+    with a ready-to-paste segment suggestion per domain for add_site."""
     data = await call_mos(ctx, "/api/matomo-analytics/site-info", {}, site=params.site)
     if "error" in data:
         return ActionResult.error(error=data["error"])
     urls = data.get("urls") or []
     name = data.get("name") or "this site"
     main_url = data.get("main_url") or "unknown"
+    data = {**data, "suggested_segments": [
+        {"domain": u, "segment": f"pageUrl=^{u}"} for u in urls
+    ]}
     summary = f"{name}: main domain {main_url}, {len(urls)} URL(s) configured total."
+    if len(urls) > 1:
+        summary += (" To track one of them separately, use add_site with that domain's suggested "
+                    "segment.")
     return ActionResult.success(data=data, summary=summary)

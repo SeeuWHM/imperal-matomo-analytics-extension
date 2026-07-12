@@ -243,8 +243,8 @@ def _render_result_body(action: str, data: dict) -> ui.UINode:
             rows=rows,
         ) if rows else ui.Empty(message="No page data")
     if action == "site_domains":
-        urls = data.get("urls") or []
         main_url = data.get("main_url") or ""
+        suggested = data.get("suggested_segments") or []
         parts: list = []
         if main_url:
             parts.append(ui.Stack(direction="h", gap=4, children=[
@@ -252,9 +252,12 @@ def _render_result_body(action: str, data: dict) -> ui.UINode:
                 ui.Badge(label=main_url, color="violet"),
             ]))
         parts.append(ui.DataTable(
-            columns=[ui.DataColumn(key="url", label=f"All configured URLs ({len(urls)})", width="100%")],
-            rows=[{"url": u} for u in urls],
-        ) if urls else ui.Empty(message="No URLs configured for this site."))
+            columns=[
+                ui.DataColumn(key="domain", label=f"Configured URLs ({len(suggested)})", width="45%"),
+                ui.DataColumn(key="segment", label="Segment for add_site (to track separately)", width="55%"),
+            ],
+            rows=[{"domain": s.get("domain", ""), "segment": s.get("segment", "")} for s in suggested],
+        ) if suggested else ui.Empty(message="No URLs configured for this site."))
         return ui.Stack(children=parts)
     if action == "daily_report":
         brief = data.get("brief") or data.get("facts") or ""

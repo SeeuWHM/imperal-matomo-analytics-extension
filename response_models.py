@@ -165,6 +165,7 @@ class SiteEntry(BaseModel):
     label: str = ""
     site_id: int = 0
     active: bool = False
+    segment: Optional[str] = None
 
 
 class SitesListResponse(BaseModel):
@@ -175,6 +176,11 @@ class SavedKeysResponse(BaseModel):
     saved_keys: list[str] = Field(default_factory=list)
 
 
+class SuggestedSegment(BaseModel):
+    domain: str = ""
+    segment: str = ""
+
+
 class SiteInfoResponse(BaseModel):
     name: str = ""
     main_url: str = ""
@@ -182,3 +188,4 @@ class SiteInfoResponse(BaseModel):
     timezone: Optional[str] = None
     currency: Optional[str] = None
     created_at: Optional[str] = None
+    suggested_segments: list[SuggestedSegment] = Field(default_factory=list)
