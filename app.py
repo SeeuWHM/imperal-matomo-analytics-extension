@@ -15,7 +15,14 @@ import os
 from imperal_sdk import Extension, ChatExtension
 
 # Shared backend bridge for all installs. Users configure only their own Matomo.
-SERVER_URL = os.environ.get("MATOMO_BACKEND_URL", "")
+#
+# This is the public API gateway host every extension on this platform calls
+# (web-tools, seo-tools, ...) - not a per-user secret, so it's a plain
+# constant rather than a declared ctx.secrets entry. MATOMO_BACKEND_URL stays
+# as an override hook for local/dev testing against a different bridge.
+# The backend (matomo-analytics-api on api-server:8105) does not currently
+# check X-API-Key at all, so an unset key is harmless.
+SERVER_URL = os.environ.get("MATOMO_BACKEND_URL", "") or "https://api.webhostmost.com"
 SERVER_API_KEY = os.environ.get("MATOMO_BACKEND_API_KEY", "")
 
 ext = Extension(
