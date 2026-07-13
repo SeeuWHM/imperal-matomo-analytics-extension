@@ -33,6 +33,10 @@ wrapped in a blanket try/except as defense-in-depth. Also fixed `main.py`'s hot-
 which was missing `response_models` and `compare_render` - either could have kept serving a stale
 cached version across deploys instead of picking up the new one.
 
+**2026-07-13 (backend hotfix, no extension version bump):** fixed the traffic chart's `pv`
+(pageviews) series always showing 0 - see "Known gaps" below, this was a long-standing bug not
+introduced by any of the above. Backend-only, already live.
+
 This file supersedes the root `README.md`, which still describes the pre-refactor architecture
 (shared backend + `X-API-Key`, single `Site ID` field, `panels_main.py` that no longer exists,
 version 4.0.6). Treat this document as the source of truth.
@@ -449,11 +453,14 @@ Edit them directly in `imperal.json` if you rename/re-describe the app.
   - **Update, same session:** README.md and pyproject.toml were rewritten to match reality
     (version 5.0.0, correct file list, secrets-panel flow, multi-site) right after this doc was
     written — see their current content directly rather than assuming they're still stale.
-- Traffic series' per-day `pageviews` is always 0 (pre-existing, unrelated to the 2026-07
-  multi-site work): `traffic`'s daily series comes from `VisitsSummary.getVisits`, which is a
-  single-metric Matomo method (visits only) — only the top-level summary object (from
-  `VisitsSummary.get`) carries a real `pageviews` total. Not fixed; flagged for whoever picks it
-  up next.
+- ~~Traffic series' per-day `pageviews` is always 0~~ **Fixed 2026-07-13.** Root cause: the daily
+  series came from `VisitsSummary.getVisits`, a single-metric Matomo method (visits only). Fix:
+  drop that second call entirely - `VisitsSummary.get` (already being called for the summary) is
+  nested per-date for `period=day` + a multi-day range, and each date bucket already carries both
+  `nb_visits` and `nb_actions` (pageviews). `normalize_traffic()` now takes just that one payload
+  and builds the series straight from it - one fewer Matomo API call per `/traffic` request, not
+  more. Verified live: last7 pageviews per day (1394, 1326, 1298, 1550, 1346, 1389, 684) sum to the
+  exact 8987 total.
 - Existing users who configured Matomo before the 2026-07-12 secrets refactor will see "Matomo
   not configured" after this version deploys, until they re-enter URL/token via the new Secrets
   panel — old `ctx.store` values for `matomo_url`/`matomo_token` are not read anymore and do not
