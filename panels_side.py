@@ -17,7 +17,7 @@ import asyncio
 from imperal_sdk import ui
 
 from app import ext, load_settings, load_result, matomo_ready, active_site_label
-from api_client import call_mos
+from api_client import call_mos, ensure_known_domains
 from panels_render import (
     kpi_stats, chart, insights_cards, pages_table,
     breakdown_table, entry_exit_table, result_zone,
@@ -91,11 +91,14 @@ async def sidebar_panel(ctx):
                      type="warn"),
         ])
 
-    traffic, rt = await asyncio.gather(
+    traffic, rt, s = await asyncio.gather(
         call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}),
         call_mos(ctx, "/api/matomo-analytics/real-time", {}),
+        ensure_known_domains(ctx, s),
         return_exceptions=True,
     )
+    if isinstance(s, Exception):
+        s = await load_settings(ctx)
     series = (traffic.get("series") or []) if not isinstance(traffic, Exception) else []
     today = series[-1].get("visits", 0) if series else 0
     yesterday = series[-2].get("visits", 0) if len(series) >= 2 else 0
@@ -165,7 +168,7 @@ async def workspace_panel(ctx):
             settings_form(s),
         ])
 
-    d, last = await asyncio.gather(_gather(ctx), load_result(ctx))
+    d, last, s = await asyncio.gather(_gather(ctx), load_result(ctx), ensure_known_domains(ctx, s))
 
     sources = (d.get("sources") or {}).get("sources") or []
     devices = (d.get("devices") or {}).get("devices") or []

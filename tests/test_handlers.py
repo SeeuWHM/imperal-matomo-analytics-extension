@@ -662,3 +662,51 @@ async def test_ipc_entry_exit(monkeypatch):
     result = await handlers_detail.ipc_entry_exit(_ctx())
     assert result.status == "success"
     assert result.data["entry_pages"][0]["url"] == "/"
+
+
+# ─── ensure_known_domains — self-heals the domain-dropdown cache ─────────────
+
+@pytest.mark.asyncio
+async def test_ensure_known_domains_backfills_missing_cache(monkeypatch):
+    """A site added before known_domains existed (or whose lookup failed at
+    add_site time) must still get the dropdown once the panel renders."""
+    async def fake_site_info_for(ctx, site_id, segment=None):
+        return {"urls": ["https://a.example.com", "https://blog.example.com"]}
+
+    monkeypatch.setattr(api_client, "site_info_for", fake_site_info_for)
+    ctx = _ctx(store={"sites": [{"label": "WHM Front", "site_id": 2}], "active_site": "WHM Front"})
+    s = await app_module.load_settings(ctx)
+    updated = await api_client.ensure_known_domains(ctx, s)
+    assert updated["sites"][0]["known_domains"] == ["https://a.example.com", "https://blog.example.com"]
+    # and it's actually persisted, not just returned in-memory
+    reloaded = await app_module.load_settings(ctx)
+    assert reloaded["sites"][0]["known_domains"] == ["https://a.example.com", "https://blog.example.com"]
+
+
+@pytest.mark.asyncio
+async def test_ensure_known_domains_noop_when_already_cached(monkeypatch):
+    calls = []
+    async def fake_site_info_for(ctx, site_id, segment=None):
+        calls.append(site_id)
+        return {"urls": ["https://should-not-be-used.example.com"]}
+
+    monkeypatch.setattr(api_client, "site_info_for", fake_site_info_for)
+    ctx = _ctx(store={"sites": [{"label": "WHM Front", "site_id": 2,
+                                  "known_domains": ["https://a.example.com"]}],
+                       "active_site": "WHM Front"})
+    s = await app_module.load_settings(ctx)
+    updated = await api_client.ensure_known_domains(ctx, s)
+    assert updated["sites"][0]["known_domains"] == ["https://a.example.com"]
+    assert calls == []  # never called - already cached
+
+
+@pytest.mark.asyncio
+async def test_ensure_known_domains_noop_on_lookup_failure(monkeypatch):
+    async def fake_site_info_for(ctx, site_id, segment=None):
+        return {"error": "backend down"}
+
+    monkeypatch.setattr(api_client, "site_info_for", fake_site_info_for)
+    ctx = _ctx(store={"sites": [{"label": "WHM Front", "site_id": 2}], "active_site": "WHM Front"})
+    s = await app_module.load_settings(ctx)
+    updated = await api_client.ensure_known_domains(ctx, s)
+    assert "known_domains" not in updated["sites"][0]

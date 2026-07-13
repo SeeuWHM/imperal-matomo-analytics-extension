@@ -1,6 +1,6 @@
 # Matomo Analytics Connector — Full Documentation
 
-**Version:** 5.2.0 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
+**Version:** 5.2.1 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
 **Git:** `github.com/SeeuWHM/imperal-matomo-analytics-extension` (branch `main`, latest commit `4923175`)
 **Live deploy status (as of writing):** `draft` — `reject_reason` on file is a **stale** message
 ("Does not meet quality standards") left over from an earlier, already-fixed review pass
@@ -120,9 +120,13 @@ Two genuinely different levels, kept structurally separate on purpose:
   deliberately runs `add_site` (a new project, or a permanently-named sub-project sharing a
   site_id via its own `segment`).
 - **domains within the active project** - the URL aliases Matomo already knows about under that
-  *same* site_id (`known_domains`, cached from `SitesManager` at `add_site` time). Once the active
-  site has 2+ of them, both `panels_side.py` (sidebar) and `panels_settings_render.py` (settings
-  form) show a second `ui.Select` for exactly this - picking a domain (or "All domains") submits
+  *same* site_id (`known_domains`, cached from `SitesManager` at `add_site` time - and self-healed
+  by `api_client.ensure_known_domains()` for any site added before this cache existed, or whose
+  lookup failed at the time; called from all 3 panels, so the dropdown appears on next render
+  without the user re-running `add_site`). Once the active site has 2+ of them, `panels_side.py`
+  (sidebar), `panels_center.py` (`analytics_hub` dashboard - the primary view), and
+  `panels_settings_render.py` (settings form) all show a second `ui.Select` for exactly this -
+  picking a domain (or "All domains", always the first option) submits
   to `view_domain(site_id, domain)`.
 
 `view_domain` **never adds a new `sites` entry** - it updates the matching project's own `segment`
@@ -282,7 +286,7 @@ filtered to `/blog`).
 |---|---|---|---|
 | `sidebar` | left | `panels_side.py` | offline (not configured) · online (live/today/yesterday stats + `_site_selector()` if 2+ sites + `_domain_selector()` if the active site has 2+ `known_domains` + "Open Dashboard" button, auto-opens center panel on load) |
 | `workspace` | right | `panels_side.py` | not-configured (settings form) · loaded (result_zone for last chat result + KPIs + 7 detail Sections including embedded settings) |
-| `analytics_hub` | center overlay | `panels_center.py` | `view="close"` empty · `view="settings"` (settings_form) · default (7-metric KPI row, 30-day chart, top pages, sources, devices; site badge shown once 2+ sites exist) |
+| `analytics_hub` | center overlay | `panels_center.py` | `view="close"` empty · `view="settings"` (settings_form) · default (7-metric KPI row, 30-day chart, top pages, sources, devices; site badge + `_domain_selector()` shown once applicable, imported from `panels_side.py`) |
 
 `_render_result_body()` in `panels_render.py` is the single dispatch point that turns a chat
 result's `action` name into a rendered body for `result_zone` — every chat function's result
@@ -378,7 +382,7 @@ Run via the shared venv (no per-extension venv exists):
 source /home/ignat/Nextcloud/MCP-Configs/Imperal-Extensions-MCP/SeeU-Extensions/.venv-ext/bin/activate
 python -m pytest tests/ -v
 ```
-As of `4923175`: **50 passed, 20 skipped** (skips are backend live-integration tests, gated on
+As of `4923175`: **53 passed, 20 skipped** (skips are backend live-integration tests, gated on
 `MATOMO_ANALYTICS_API_URL`/`MATOMO_URL`/`MATOMO_TOKEN` env vars — not failures). Covers:
 load/save settings, secrets never leaking into `ctx.store`, legacy single-site migration,
 `resolve_site`/`resolve_site_id`/`active_site_label`/`sites_with_active`, per-site segment

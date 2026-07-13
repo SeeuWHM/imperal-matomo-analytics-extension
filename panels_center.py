@@ -6,9 +6,10 @@ import asyncio
 from imperal_sdk import ui
 
 from app import ext, load_settings, matomo_ready, active_site_label
-from api_client import call_mos
+from api_client import call_mos, ensure_known_domains
 from panels_render import kpi_stats, chart, pages_table, breakdown_table
 from panels_settings_render import settings_form
+from panels_side import _domain_selector
 
 
 REFRESH = "on_event:analytics.action.result"
@@ -24,7 +25,7 @@ async def hub_panel(ctx, view: str = "", **_kw):
 
     # Settings view
     if view == "settings":
-        s = await load_settings(ctx)
+        s = await ensure_known_domains(ctx, await load_settings(ctx))
         return ui.Stack(children=[
             ui.Stack(direction="h", justify="between", align="center", children=[
                 ui.Header(text="⚙️ Analytics Settings", level=3),
@@ -44,6 +45,7 @@ async def hub_panel(ctx, view: str = "", **_kw):
             ),
             ui.Button(label="⚙️ Open Settings", on_click=ui.Call("__panel__analytics_hub", view="settings")),
         ])
+    s = await ensure_known_domains(ctx, s)
 
     # 6 parallel calls — insights removed to keep render under Temporal 30s timeout.
     # insights is expensive (5 sequential Matomo calls inside MOS) and not needed for
@@ -93,6 +95,7 @@ async def hub_panel(ctx, view: str = "", **_kw):
                       on_click=ui.Call("__panel__analytics_hub", view="close")),
         ]),
     ])
+    domain_selector = _domain_selector(s)
 
     # ── KPI stats row ─────────────────────────────────────────────────────────
     series    = traffic.get("series") or []
@@ -210,6 +213,7 @@ async def hub_panel(ctx, view: str = "", **_kw):
 
     return ui.Stack(children=[
         header,
+        *([domain_selector] if domain_selector else []),
         kpis,
         ui.Divider(),
         traffic_chart,
