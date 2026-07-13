@@ -105,13 +105,22 @@ to be pasted straight into `add_site(label, site_id, segment=...)`.
 
 ### Domain-level switcher (`view_domain`, `_domain_selector`)
 
-A second, narrower switcher than `set_active_site`: once a site is active, if it has 2+
-`known_domains`, both `panels_side.py` (sidebar) and `panels_settings_render.py` (settings form)
-show a second `ui.Select` populated straight from that cache - picking a domain (or "All domains")
-submits to `view_domain(site_id, domain)`, which finds an existing `sites` entry with that exact
-`(site_id, segment)` pair and activates it, or creates one on the fly (auto-labelled by the
-domain, de-duplicated against existing labels) - no `add_site` chat round-trip needed to look at
-just one domain within a project.
+Two genuinely different levels, kept structurally separate on purpose:
+
+- **`sites` = real Matomo projects (site_ids)** - e.g. "WHM Front Websites" and "Client Zone",
+  picked via `set_active_site`/`_site_selector`. This list should only ever grow when the user
+  deliberately runs `add_site` (a new project, or a permanently-named sub-project sharing a
+  site_id via its own `segment`).
+- **domains within the active project** - the URL aliases Matomo already knows about under that
+  *same* site_id (`known_domains`, cached from `SitesManager` at `add_site` time). Once the active
+  site has 2+ of them, both `panels_side.py` (sidebar) and `panels_settings_render.py` (settings
+  form) show a second `ui.Select` for exactly this - picking a domain (or "All domains") submits
+  to `view_domain(site_id, domain)`.
+
+`view_domain` **never adds a new `sites` entry** - it updates the matching project's own `segment`
+in place (preferring the currently active entry if several share that site_id) and clears it for
+"All domains". Getting this backwards once made every domain look like its own top-level "site" in
+the project selector - fixed 2026-07-13; `add_site` is the only function that grows `sites`.
 
 ---
 
@@ -195,7 +204,7 @@ paraphrased.
 | `list_sites` | read | none | includes `active: bool` per site |
 | `set_active_site` | write | `label` (`SetActiveSiteParams`) | `refresh_panels=["sidebar","workspace","analytics_hub"]` |
 | `site_domains` | read | `site` (`SiteDomainsParams`) | ground-truth `main_url` + `urls[]` + `suggested_segments[]` from Matomo's SitesManager |
-| `view_domain` | write | `site_id, domain` (`ViewDomainParams`) | finds-or-creates the `sites` entry for `(site_id, pageUrl=^domain)` and activates it; `domain="All domains"` clears the segment |
+| `view_domain` | write | `site_id, domain` (`ViewDomainParams`) | updates that site_id's own entry's `segment` in place (never adds a new site); `domain="All domains"` clears it |
 
 ### Real-time / breakdown detail — `handlers_detail.py`
 | Function | Params | Notes |
@@ -352,7 +361,7 @@ Run via the shared venv (no per-extension venv exists):
 source /home/ignat/Nextcloud/MCP-Configs/Imperal-Extensions-MCP/SeeU-Extensions/.venv-ext/bin/activate
 python -m pytest tests/ -v
 ```
-As of `4923175`: **45 passed, 20 skipped** (skips are backend live-integration tests, gated on
+As of `4923175`: **46 passed, 20 skipped** (skips are backend live-integration tests, gated on
 `MATOMO_ANALYTICS_API_URL`/`MATOMO_URL`/`MATOMO_TOKEN` env vars — not failures). Covers:
 load/save settings, secrets never leaking into `ctx.store`, legacy single-site migration,
 `resolve_site`/`resolve_site_id`/`active_site_label`/`sites_with_active`, per-site segment
@@ -362,7 +371,8 @@ generation + config-missing error path, `call_mos` site/segment resolution, traf
 trends happy-path + config-missing, the `geo` "countries" key regression, `ipc_matomo_config`
 non-leak, the conversions "no named goals" fallback message, `call_mos`'s single-target unwrap +
 multi-target passthrough (incl. per-target error shape), a comparison-render smoke test, and
-`view_domain` (create/reuse/all-domains + `add_site`'s best-effort `known_domains` cache).
+`view_domain` (in-place update/prefers-active-entry/all-domains/unknown-site_id-errors +
+`add_site`'s best-effort `known_domains` cache).
 
 ---
 

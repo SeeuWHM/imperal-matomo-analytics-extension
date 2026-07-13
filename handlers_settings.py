@@ -3,7 +3,7 @@
 
 from imperal_sdk.types import ActionResult
 
-from app import chat, save_settings, load_settings, sites_with_active
+from app import chat, save_settings, load_settings, sites_with_active, active_site_label
 from api_client import call_mos, site_info_for
 from params import (
     SaveSettingsParams, AddSiteParams, RemoveSiteParams, ListSitesParams,
@@ -196,10 +196,11 @@ async def fn_site_domains(ctx, params: SiteDomainsParams) -> ActionResult:
 
 @chat.function(
     "view_domain",
-    description="Switch to viewing just one domain within a site/project whose Matomo site_id "
-                "covers several URL aliases (e.g. jump straight to a blog subdomain). Finds or "
-                "creates the matching site/project entry for that (site_id, domain) pair and makes "
-                "it the default - pass domain='All domains' to go back to the whole site. "
+    description="Scope the CURRENT site/project down to one domain, when its Matomo site_id "
+                "covers several URL aliases (e.g. jump straight to a blog subdomain within the "
+                "same project) - pass domain='All domains' to go back to the whole site. This "
+                "updates that project's own segment in place, it does NOT add a new site/project "
+                "(use add_site for that, to give a sub-project its own permanent label). "
                 "Use for: покажи только блог, switch to domain X, view just this subdomain, "
                 "смотреть только на этот домен, только для домена.",
     action_type="write",
@@ -209,37 +210,31 @@ async def fn_site_domains(ctx, params: SiteDomainsParams) -> ActionResult:
     data_model=SitesListResponse,
 )
 async def fn_view_domain(ctx, params: ViewDomainParams) -> ActionResult:
-    """Resolve (site_id, domain) to a sites[] entry - reuse one that already
-    has this exact segment, or create one on the fly - then activate it."""
+    """Update the existing site/project's own segment to scope it to one
+    domain - never creates a new sites[] entry (that's what add_site is for,
+    when the user deliberately wants a persistent, separately-named
+    sub-project). Prefers the currently active entry if several sites share
+    this site_id."""
     s = await load_settings(ctx)
     sites = s.get("sites") or []
+    active_label = active_site_label(s)
+    candidates = [i for i, site in enumerate(sites) if int(site.get("site_id", 0)) == params.site_id]
+    if not candidates:
+        return ActionResult.error(error=f"No site configured with site_id {params.site_id}.")
+    idx = next((i for i in candidates if sites[i].get("label") == active_label), candidates[0])
+
     all_domains = params.domain.strip().lower() in ("", "all", "all domains")
-    segment = None if all_domains else f"pageUrl=^{params.domain.strip()}"
+    updated = dict(sites[idx])
+    if all_domains:
+        updated.pop("segment", None)
+    else:
+        updated["segment"] = f"pageUrl=^{params.domain.strip()}"
+    sites[idx] = updated
 
-    match = next((site for site in sites
-                  if int(site.get("site_id", 0)) == params.site_id
-                  and (site.get("segment") or None) == segment), None)
-    if match:
-        s = await save_settings(ctx, {"active_site": match["label"]})
-        return ActionResult.success(
-            data={"sites": sites_with_active(s)},
-            summary=f"Switched to '{match['label']}'.",
-            refresh_panels=["sidebar", "workspace", "analytics_hub"],
-        )
-
-    label = "All domains" if all_domains else params.domain.strip()
-    existing_labels = {site.get("label", "").strip().lower() for site in sites}
-    base_label, n = label, 2
-    while label.strip().lower() in existing_labels:
-        label = f"{base_label} ({n})"
-        n += 1
-    entry = {"label": label, "site_id": params.site_id}
-    if segment:
-        entry["segment"] = segment
-    updated_sites = sites + [entry]
-    s = await save_settings(ctx, {"sites": updated_sites, "active_site": label})
+    s = await save_settings(ctx, {"sites": sites, "active_site": updated["label"]})
+    scope = "all domains" if all_domains else params.domain.strip()
     return ActionResult.success(
         data={"sites": sites_with_active(s)},
-        summary=f"Now viewing '{label}'.",
+        summary=f"'{updated['label']}' now viewing {scope}.",
         refresh_panels=["sidebar", "workspace", "analytics_hub"],
     )

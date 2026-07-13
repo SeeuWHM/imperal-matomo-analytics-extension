@@ -522,51 +522,67 @@ async def test_traffic_renders_comparison_table_for_multiple_sites(monkeypatch):
 # ─── view_domain — domain-level switcher within one Matomo site_id ───────────
 
 @pytest.mark.asyncio
-async def test_view_domain_creates_new_entry_and_activates():
-    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 2,
+async def test_view_domain_updates_existing_site_segment_in_place():
+    """view_domain must scope the EXISTING project entry, never add a new
+    top-level site - that's what polluted the site_id selector with
+    per-domain fakes before this fix."""
+    ctx = _ctx(store={"sites": [{"label": "WHM Front", "site_id": 2,
                                   "known_domains": ["https://a.example.com", "https://blog.example.com"]}],
-                       "active_site": "Main"})
+                       "active_site": "WHM Front"})
     result = await handlers_settings.fn_view_domain(
         ctx, ViewDomainParams(site_id=2, domain="https://blog.example.com"),
     )
     assert result.status == "success"
     s = await app_module.load_settings(ctx)
-    assert s["active_site"] == "https://blog.example.com"
-    new_entry = s["sites"][-1]
-    assert new_entry["site_id"] == 2
-    assert new_entry["segment"] == "pageUrl=^https://blog.example.com"
+    assert len(s["sites"]) == 1  # no new entry - same project, just re-scoped
+    assert s["active_site"] == "WHM Front"
+    assert s["sites"][0]["segment"] == "pageUrl=^https://blog.example.com"
 
 
 @pytest.mark.asyncio
-async def test_view_domain_reuses_existing_matching_entry():
-    """If a sites[] entry already has this exact (site_id, segment), switch
-    to it instead of creating a duplicate."""
+async def test_view_domain_prefers_active_entry_when_site_id_shared():
+    """If the user deliberately used add_site to give a sub-project its own
+    persistent label (same site_id, different segment), view_domain must not
+    touch that one - it re-scopes whichever entry is currently active."""
     ctx = _ctx(store={"sites": [
-        {"label": "Main", "site_id": 2},
+        {"label": "WHM Front", "site_id": 2},
         {"label": "Blog", "site_id": 2, "segment": "pageUrl=^https://blog.example.com"},
-    ], "active_site": "Main"})
+    ], "active_site": "WHM Front"})
     result = await handlers_settings.fn_view_domain(
-        ctx, ViewDomainParams(site_id=2, domain="https://blog.example.com"),
+        ctx, ViewDomainParams(site_id=2, domain="https://a.example.com"),
     )
     assert result.status == "success"
     s = await app_module.load_settings(ctx)
-    assert s["active_site"] == "Blog"
-    assert len(s["sites"]) == 2  # no duplicate created
+    assert len(s["sites"]) == 2
+    assert s["sites"][0]["label"] == "WHM Front"
+    assert s["sites"][0]["segment"] == "pageUrl=^https://a.example.com"
+    assert s["sites"][1] == {"label": "Blog", "site_id": 2, "segment": "pageUrl=^https://blog.example.com"}
 
 
 @pytest.mark.asyncio
-async def test_view_domain_all_domains_clears_segment():
+async def test_view_domain_all_domains_clears_segment_in_place():
     ctx = _ctx(store={"sites": [
-        {"label": "Blog", "site_id": 2, "segment": "pageUrl=^https://blog.example.com"},
-    ], "active_site": "Blog"})
+        {"label": "WHM Front", "site_id": 2, "segment": "pageUrl=^https://blog.example.com"},
+    ], "active_site": "WHM Front"})
     result = await handlers_settings.fn_view_domain(
         ctx, ViewDomainParams(site_id=2, domain="All domains"),
     )
     assert result.status == "success"
     s = await app_module.load_settings(ctx)
-    new_entry = s["sites"][-1]
-    assert "segment" not in new_entry
-    assert s["active_site"] == new_entry["label"]
+    assert len(s["sites"]) == 1
+    assert "segment" not in s["sites"][0]
+    assert s["active_site"] == "WHM Front"
+
+
+@pytest.mark.asyncio
+async def test_view_domain_unknown_site_id_errors():
+    ctx = _ctx(store={"sites": [{"label": "WHM Front", "site_id": 2}], "active_site": "WHM Front"})
+    result = await handlers_settings.fn_view_domain(
+        ctx, ViewDomainParams(site_id=999, domain="https://a.example.com"),
+    )
+    assert result.status == "error"
+    s = await app_module.load_settings(ctx)
+    assert s["sites"] == [{"label": "WHM Front", "site_id": 2}]  # untouched
 
 
 @pytest.mark.asyncio
