@@ -669,7 +669,9 @@ async def test_ipc_entry_exit(monkeypatch):
 @pytest.mark.asyncio
 async def test_ensure_known_domains_backfills_missing_cache(monkeypatch):
     """A site added before known_domains existed (or whose lookup failed at
-    add_site time) must still get the dropdown once the panel renders."""
+    add_site time) must still get the dropdown once the panel renders - this
+    is READ-ONLY (panels must stay side-effect-free): it enriches the
+    returned dict for this render only, it does not persist to ctx.store."""
     async def fake_site_info_for(ctx, site_id, segment=None):
         return {"urls": ["https://a.example.com", "https://blog.example.com"]}
 
@@ -678,9 +680,9 @@ async def test_ensure_known_domains_backfills_missing_cache(monkeypatch):
     s = await app_module.load_settings(ctx)
     updated = await api_client.ensure_known_domains(ctx, s)
     assert updated["sites"][0]["known_domains"] == ["https://a.example.com", "https://blog.example.com"]
-    # and it's actually persisted, not just returned in-memory
+    # NOT persisted - ctx.store still has the original, cache-less entry
     reloaded = await app_module.load_settings(ctx)
-    assert reloaded["sites"][0]["known_domains"] == ["https://a.example.com", "https://blog.example.com"]
+    assert "known_domains" not in reloaded["sites"][0]
 
 
 @pytest.mark.asyncio
@@ -710,3 +712,18 @@ async def test_ensure_known_domains_noop_on_lookup_failure(monkeypatch):
     s = await app_module.load_settings(ctx)
     updated = await api_client.ensure_known_domains(ctx, s)
     assert "known_domains" not in updated["sites"][0]
+
+
+@pytest.mark.asyncio
+async def test_ensure_known_domains_never_raises_even_on_unexpected_exception(monkeypatch):
+    """A panel render must never break because of this best-effort lookup -
+    even a genuinely unexpected exception (not just an {'error': ...} dict)
+    must be swallowed and the original settings returned unchanged."""
+    async def fake_site_info_for(ctx, site_id, segment=None):
+        raise RuntimeError("connection reset")
+
+    monkeypatch.setattr(api_client, "site_info_for", fake_site_info_for)
+    ctx = _ctx(store={"sites": [{"label": "WHM Front", "site_id": 2}], "active_site": "WHM Front"})
+    s = await app_module.load_settings(ctx)
+    updated = await api_client.ensure_known_domains(ctx, s)
+    assert updated["sites"] == s["sites"]

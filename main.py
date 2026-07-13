@@ -8,7 +8,8 @@ _dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _dir)
 
 for _m in list(sys.modules):
-    if _m in ("app", "api_client", "params", "skeleton", "audience_helpers",
+    if _m in ("app", "api_client", "params", "response_models", "compare_render",
+              "skeleton", "audience_helpers",
               "handlers_traffic", "handlers_settings",
               "handlers_detail", "handlers_insights",
               "handlers_audience", "handlers_channels",

@@ -1,6 +1,6 @@
 # Matomo Analytics Connector — Full Documentation
 
-**Version:** 5.2.1 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
+**Version:** 5.2.2 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
 **Git:** `github.com/SeeuWHM/imperal-matomo-analytics-extension` (branch `main`, latest commit `4923175`)
 **Live deploy status (as of writing):** `draft` — `reject_reason` on file is a **stale** message
 ("Does not meet quality standards") left over from an earlier, already-fixed review pass
@@ -25,6 +25,13 @@ the real Matomo projects. It now only ever updates the existing project's own `s
 (`organic_keywords`, `site_search`, `page_details`, `entry_exit`) as lightweight, individually
 callable content-strategy signals - previously only reachable via chat, or bundled inside the
 slow `full_report`.
+
+**2026-07-13 (v5.2.2):** fixed the left sidebar failing to render in production - `ensure_known_domains`
+(added in v5.2.1) called `save_settings` from inside a panel render, which panels apparently aren't
+allowed to do. It's now read-only (enriches the in-memory dict for that render, never writes) and
+wrapped in a blanket try/except as defense-in-depth. Also fixed `main.py`'s hot-reload module list,
+which was missing `response_models` and `compare_render` - either could have kept serving a stale
+cached version across deploys instead of picking up the new one.
 
 This file supersedes the root `README.md`, which still describes the pre-refactor architecture
 (shared backend + `X-API-Key`, single `Site ID` field, `panels_main.py` that no longer exists,
@@ -120,11 +127,15 @@ Two genuinely different levels, kept structurally separate on purpose:
   deliberately runs `add_site` (a new project, or a permanently-named sub-project sharing a
   site_id via its own `segment`).
 - **domains within the active project** - the URL aliases Matomo already knows about under that
-  *same* site_id (`known_domains`, cached from `SitesManager` at `add_site` time - and self-healed
-  by `api_client.ensure_known_domains()` for any site added before this cache existed, or whose
-  lookup failed at the time; called from all 3 panels, so the dropdown appears on next render
-  without the user re-running `add_site`). Once the active site has 2+ of them, `panels_side.py`
-  (sidebar), `panels_center.py` (`analytics_hub` dashboard - the primary view), and
+  *same* site_id (`known_domains`, cached from `SitesManager` at `add_site` time - persisted there,
+  since `add_site` is a write action). For any site added before this cache existed (or whose
+  lookup failed at the time), `api_client.ensure_known_domains()` fetches it live so the dropdown
+  still appears - called from all 3 panels, but **read-only**: panels must stay side-effect-free,
+  so it enriches the in-memory settings for that render only and never calls `save_settings`
+  (v5.2.1 persisted from inside a panel render - broke the sidebar in production; v5.2.2 fixed by
+  making it read-only + wrapping it in a blanket try/except so a lookup failure can never take the
+  panel down). Once the active site has 2+ known domains, `panels_side.py` (sidebar),
+  `panels_center.py` (`analytics_hub` dashboard - the primary view), and
   `panels_settings_render.py` (settings form) all show a second `ui.Select` for exactly this -
   picking a domain (or "All domains", always the first option) submits
   to `view_domain(site_id, domain)`.
@@ -390,7 +401,7 @@ Run via the shared venv (no per-extension venv exists):
 source /home/ignat/Nextcloud/MCP-Configs/Imperal-Extensions-MCP/SeeU-Extensions/.venv-ext/bin/activate
 python -m pytest tests/ -v
 ```
-As of `4923175`: **53 passed, 20 skipped** (skips are backend live-integration tests, gated on
+As of `4923175`: **54 passed, 20 skipped** (skips are backend live-integration tests, gated on
 `MATOMO_ANALYTICS_API_URL`/`MATOMO_URL`/`MATOMO_TOKEN` env vars — not failures). Covers:
 load/save settings, secrets never leaking into `ctx.store`, legacy single-site migration,
 `resolve_site`/`resolve_site_id`/`active_site_label`/`sites_with_active`, per-site segment

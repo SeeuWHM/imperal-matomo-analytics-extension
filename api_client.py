@@ -7,7 +7,7 @@ check any auth header, so none is sent.
 """
 from __future__ import annotations
 
-from app import SERVER_URL, load_settings, save_settings, matomo_ready, resolve_site, active_site_label
+from app import SERVER_URL, load_settings, matomo_ready, resolve_site, active_site_label
 
 TIMEOUT = 30
 HEAVY_TIMEOUT = 90  # full-report, daily-report: backend runs ~24 parallel Matomo calls
@@ -123,22 +123,28 @@ async def site_info_for(ctx, site_id: int, segment: str | None = None) -> dict:
 
 
 async def ensure_known_domains(ctx, s: dict) -> dict:
-    """Self-heal known_domains for the ACTIVE site only, if missing - e.g. it
-    was added before this cache existed (pre-v5.1.0), or add_site's lookup
-    failed at the time. Fetches once via site_info_for and persists, so the
-    domain-level dropdown can appear without the user re-running add_site.
-    Best-effort: returns `s` unchanged on any failure, never raises."""
-    sites = s.get("sites") or []
-    active_label = active_site_label(s)
-    idx = next((i for i, site in enumerate(sites) if site.get("label") == active_label), None)
-    if idx is None or sites[idx].get("known_domains"):
+    """Best-effort, READ-ONLY enrichment for panel rendering: if the active
+    site's known_domains cache is missing (e.g. it was added before this
+    cache existed (pre-v5.1.0), or add_site's lookup failed at the time),
+    fetch it live so the domain-level dropdown can still appear. Deliberately
+    does NOT persist (panels must stay side-effect-free) - add_site remains
+    the only place known_domains gets written to ctx.store. Returns `s`
+    unchanged (a plain dict, never a coroutine/exception) on any failure or
+    when there's nothing to enrich - never raises."""
+    try:
+        sites = s.get("sites") or []
+        active_label = active_site_label(s)
+        idx = next((i for i, site in enumerate(sites) if site.get("label") == active_label), None)
+        if idx is None or sites[idx].get("known_domains"):
+            return s
+        site_id = sites[idx].get("site_id")
+        if not site_id:
+            return s
+        info = await site_info_for(ctx, site_id, sites[idx].get("segment"))
+        if "error" in info or not info.get("urls"):
+            return s
+        updated = list(sites)
+        updated[idx] = {**updated[idx], "known_domains": info["urls"]}
+        return {**s, "sites": updated}
+    except Exception:
         return s
-    site_id = sites[idx].get("site_id")
-    if not site_id:
-        return s
-    info = await site_info_for(ctx, site_id, sites[idx].get("segment"))
-    if "error" in info or not info.get("urls"):
-        return s
-    updated = list(sites)
-    updated[idx] = {**updated[idx], "known_domains": info["urls"]}
-    return await save_settings(ctx, {"sites": updated})
