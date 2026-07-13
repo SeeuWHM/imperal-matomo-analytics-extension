@@ -10,6 +10,7 @@ from imperal_sdk.types import ActionResult
 
 from app import chat, save_result, load_settings, matomo_ready, active_site_label
 from api_client import call_mos
+from compare_render import compare_table, compare_summary
 from params import TrafficParams, TopPagesParams, TrendsParams
 from response_models import TrafficOverviewRecord, PageListResponse, TrendSummaryResponse
 
@@ -32,9 +33,18 @@ async def fn_traffic(ctx, params: TrafficParams) -> ActionResult:
     """Return visits/pageviews summary from Matomo for the requested period."""
     data = await call_mos(ctx, "/api/matomo-analytics/traffic", {
         "period": params.period, "date": params.date,
-    }, site=params.site)
+    }, site=params.site, sites=params.sites)
     if "error" in data:
         return _err(data)
+
+    if "results" in data:
+        results = data["results"]
+        table = compare_table(results, [
+            ("visits", "Visits", lambda d: f"{d.get('visits', 0):,}"),
+            ("pageviews", "Pageviews", lambda d: f"{d.get('pageviews', 0):,}"),
+            ("bounce", "Bounce", lambda d: f"{d.get('bounce_rate', 0)}%" if d.get("bounce_rate") is not None else "-"),
+        ])
+        return ActionResult.success(data=data, summary=compare_summary(results), ui=table)
 
     visits = data.get("visits", 0)
     pageviews = data.get("pageviews", 0)
@@ -55,9 +65,20 @@ async def fn_top_pages(ctx, params: TopPagesParams) -> ActionResult:
     """Return the N most visited pages for the chosen period and segment."""
     data = await call_mos(ctx, "/api/matomo-analytics/top-pages", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    }, site=params.site)
+    }, site=params.site, sites=params.sites)
     if "error" in data:
         return _err(data)
+
+    if "results" in data:
+        results = data["results"]
+        def _top(d):
+            pages = d.get("pages") or []
+            return (pages[0].get("url") or "-")[:40] if pages else "-"
+        table = compare_table(results, [
+            ("pages", "# pages", lambda d: str(len(d.get("pages") or []))),
+            ("top", "Top page", _top),
+        ])
+        return ActionResult.success(data=data, summary=compare_summary(results), ui=table)
 
     await save_result(ctx, "top_pages", "Top 10 pages", data)
     pages = data.get("pages") or []
@@ -91,9 +112,18 @@ async def fn_top_pages(ctx, params: TopPagesParams) -> ActionResult:
 )
 async def fn_trends(ctx, params: TrendsParams) -> ActionResult:
     """Return week-over-week visits and the % change, plus up/down direction."""
-    data = await call_mos(ctx, "/api/matomo-analytics/trends", {}, site=params.site)
+    data = await call_mos(ctx, "/api/matomo-analytics/trends", {}, site=params.site, sites=params.sites)
     if "error" in data:
         return _err(data)
+
+    if "results" in data:
+        results = data["results"]
+        table = compare_table(results, [
+            ("cw", "This week", lambda d: f"{d.get('current_week', 0):,}"),
+            ("pw", "Last week", lambda d: f"{d.get('previous_week', 0):,}"),
+            ("chg", "WoW", lambda d: f"{d.get('change_percent', 0):+.1f}%"),
+        ])
+        return ActionResult.success(data=data, summary=compare_summary(results), ui=table)
 
     await save_result(ctx, "trends", "Week vs last week", data)
     change = data.get("change_percent", 0)

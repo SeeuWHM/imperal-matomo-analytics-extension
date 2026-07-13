@@ -27,7 +27,7 @@ import app as app_module
 from params import (
     TrafficParams, TopPagesParams, TrendsParams, SaveSettingsParams,
     AddSiteParams, RemoveSiteParams, ListSitesParams, ConversionsParams,
-    SetActiveSiteParams, SiteDomainsParams,
+    SetActiveSiteParams, SiteDomainsParams, ViewDomainParams,
 )
 
 
@@ -247,7 +247,7 @@ async def test_set_active_site_unknown_label():
 
 @pytest.mark.asyncio
 async def test_site_domains_success(monkeypatch):
-    async def fake_call(ctx, endpoint, extra=None, site=""):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
         assert endpoint == "/api/matomo-analytics/site-info"
         return {"name": "Front Websites", "main_url": "https://www.example.com",
                 "urls": ["https://www.example.com", "https://blog.example.com"]}
@@ -261,7 +261,7 @@ async def test_site_domains_success(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_site_domains_suggests_segment_per_url(monkeypatch):
-    async def fake_call(ctx, endpoint, extra=None, site=""):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
         return {"name": "Front Websites", "main_url": "https://www.example.com",
                 "urls": ["https://www.example.com", "https://blog.example.com"]}
 
@@ -275,7 +275,7 @@ async def test_site_domains_suggests_segment_per_url(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_site_domains_error(monkeypatch):
-    async def fake_call(ctx, endpoint, extra=None, site=""):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
         return {"error": "Matomo not configured - open Settings and add your URL + Auth Token.", "_config": True}
 
     monkeypatch.setattr(handlers_settings, "call_mos", fake_call)
@@ -309,7 +309,7 @@ async def test_call_mos_resolves_site_label_to_site_id(monkeypatch):
     ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}]})
     ctx.http.post = fake_post
     await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day"}, site="Blog")
-    assert captured["site_id"] == 2
+    assert captured["targets"] == [{"label": "Blog", "site_id": 2, "segment": None}]
 
 
 @pytest.mark.asyncio
@@ -334,10 +334,10 @@ async def test_call_mos_uses_per_site_segment_over_global(monkeypatch):
     })
     ctx.http.post = fake_post
     await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day"}, site="Blog")
-    assert captured["segment"] == "pageUrl=^https://blog.example.com"
+    assert captured["targets"][0]["segment"] == "pageUrl=^https://blog.example.com"
 
     await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day"}, site="Main")
-    assert captured["segment"] == "visitorType==new"
+    assert captured["targets"][0]["segment"] == "visitorType==new"
 
 
 @pytest.mark.asyncio
@@ -352,7 +352,7 @@ async def test_call_mos_reports_missing_matomo():
 
 @pytest.mark.asyncio
 async def test_traffic_success(monkeypatch):
-    async def fake_call(ctx, endpoint, extra=None, site=""):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
         assert endpoint == "/api/matomo-analytics/traffic"
         return {"visits": 100, "pageviews": 300, "series": []}
 
@@ -364,7 +364,7 @@ async def test_traffic_success(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_traffic_config_missing(monkeypatch):
-    async def fake_call(ctx, endpoint, extra=None, site=""):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
         return {"error": "Matomo not configured - open Settings and add your URL + Auth Token.", "_config": True}
 
     monkeypatch.setattr(handlers_traffic, "call_mos", fake_call)
@@ -375,7 +375,7 @@ async def test_traffic_config_missing(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_top_pages_success(monkeypatch):
-    async def fake_call(ctx, endpoint, extra=None, site=""):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
         assert endpoint == "/api/matomo-analytics/top-pages"
         assert extra["limit"] == 5
         return {"pages": [{"url": "/a", "views": 10}], "count": 1}
@@ -387,7 +387,7 @@ async def test_top_pages_success(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_trends_success(monkeypatch):
-    async def fake_call(ctx, endpoint, extra=None, site=""):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
         return {"current_week": 100, "previous_week": 80, "change_percent": 25.0, "direction": "up"}
 
     monkeypatch.setattr(handlers_traffic, "call_mos", fake_call)
@@ -400,7 +400,7 @@ async def test_trends_success(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_geo_reads_countries_key(monkeypatch):
-    async def fake_call(ctx, endpoint, extra=None, site=""):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
         assert endpoint == "/api/matomo-analytics/geo"
         return {"items": [{"label": "US", "visits": 10, "percent": 100.0}],
                 "countries": [{"label": "US", "visits": 10, "percent": 100.0}]}
@@ -428,7 +428,7 @@ async def test_ipc_matomo_config_does_not_leak_token():
 
 @pytest.mark.asyncio
 async def test_conversions_no_named_goals_shows_message(monkeypatch):
-    async def fake_call(ctx, endpoint, extra=None, site=""):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
         return {"has_goals": False, "goals": [], "total_conversions": 0,
                 "message": "Configure goals in Matomo to track conversions."}
 
@@ -438,3 +438,159 @@ async def test_conversions_no_named_goals_shows_message(monkeypatch):
     )
     assert result.status == "success"
     assert "No goals" in result.summary
+
+
+# ─── call_mos — universal single-or-multi targets envelope ───────────────────
+
+class _FakeResp:
+    def __init__(self, body, ok=True):
+        self._body = body
+        self.ok = ok
+    def json(self):
+        return self._body
+
+
+@pytest.mark.asyncio
+async def test_call_mos_single_target_unwraps_multiresult_envelope(monkeypatch):
+    """A single site_id/label still reaches every existing handler as the old
+    flat shape - the backend's MultiResult envelope is unwrapped for them."""
+    async def fake_post(url, json, timeout):
+        assert len(json["targets"]) == 1
+        return _FakeResp({"results": [{"label": "Main", "site_id": 1, "error": None,
+                                       "data": {"visits": 42}}]})
+
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}]})
+    ctx.http.post = fake_post
+    data = await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {})
+    assert data == {"visits": 42}
+
+
+@pytest.mark.asyncio
+async def test_call_mos_single_target_error_becomes_error_dict(monkeypatch):
+    async def fake_post(url, json, timeout):
+        return _FakeResp({"results": [{"label": "Main", "site_id": 1,
+                                       "error": "Matomo said no", "data": {}}]})
+
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}]})
+    ctx.http.post = fake_post
+    data = await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {})
+    assert data == {"error": "Matomo said no"}
+
+
+@pytest.mark.asyncio
+async def test_call_mos_multiple_sites_builds_one_target_per_label_and_returns_raw_results(monkeypatch):
+    """Asking to compare 2 sites sends ONE request with 2 targets (not 2
+    separate calls), and the caller gets the raw per-site list back."""
+    captured = {}
+
+    async def fake_post(url, json, timeout):
+        captured.update(json)
+        return _FakeResp({"results": [
+            {"label": "Main", "site_id": 1, "error": None, "data": {"visits": 10}},
+            {"label": "Blog", "site_id": 2, "error": None, "data": {"visits": 20}},
+        ]})
+
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}]})
+    ctx.http.post = fake_post
+    data = await api_client.call_mos(ctx, "/api/matomo-analytics/traffic", {}, sites=["Main", "Blog"])
+    assert [t["site_id"] for t in captured["targets"]] == [1, 2]
+    assert data == {"results": [
+        {"label": "Main", "site_id": 1, "error": None, "data": {"visits": 10}},
+        {"label": "Blog", "site_id": 2, "error": None, "data": {"visits": 20}},
+    ]}
+
+
+@pytest.mark.asyncio
+async def test_traffic_renders_comparison_table_for_multiple_sites(monkeypatch):
+    """fn_traffic must branch to a comparison render, not crash on the
+    envelope shape, when the caller passes sites=[...]."""
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
+        assert sites == ["Main", "Blog"]
+        return {"results": [
+            {"label": "Main", "site_id": 1, "error": None,
+             "data": {"visits": 10, "pageviews": 30, "bounce_rate": 40.0}},
+            {"label": "Blog", "site_id": 2, "error": None,
+             "data": {"visits": 20, "pageviews": 60, "bounce_rate": 50.0}},
+        ]}
+
+    monkeypatch.setattr(handlers_traffic, "call_mos", fake_call)
+    result = await handlers_traffic.fn_traffic(_ctx(), TrafficParams(sites=["Main", "Blog"]))
+    assert result.status == "success"
+    assert "2 sites" in result.summary
+
+
+# ─── view_domain — domain-level switcher within one Matomo site_id ───────────
+
+@pytest.mark.asyncio
+async def test_view_domain_creates_new_entry_and_activates():
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 2,
+                                  "known_domains": ["https://a.example.com", "https://blog.example.com"]}],
+                       "active_site": "Main"})
+    result = await handlers_settings.fn_view_domain(
+        ctx, ViewDomainParams(site_id=2, domain="https://blog.example.com"),
+    )
+    assert result.status == "success"
+    s = await app_module.load_settings(ctx)
+    assert s["active_site"] == "https://blog.example.com"
+    new_entry = s["sites"][-1]
+    assert new_entry["site_id"] == 2
+    assert new_entry["segment"] == "pageUrl=^https://blog.example.com"
+
+
+@pytest.mark.asyncio
+async def test_view_domain_reuses_existing_matching_entry():
+    """If a sites[] entry already has this exact (site_id, segment), switch
+    to it instead of creating a duplicate."""
+    ctx = _ctx(store={"sites": [
+        {"label": "Main", "site_id": 2},
+        {"label": "Blog", "site_id": 2, "segment": "pageUrl=^https://blog.example.com"},
+    ], "active_site": "Main"})
+    result = await handlers_settings.fn_view_domain(
+        ctx, ViewDomainParams(site_id=2, domain="https://blog.example.com"),
+    )
+    assert result.status == "success"
+    s = await app_module.load_settings(ctx)
+    assert s["active_site"] == "Blog"
+    assert len(s["sites"]) == 2  # no duplicate created
+
+
+@pytest.mark.asyncio
+async def test_view_domain_all_domains_clears_segment():
+    ctx = _ctx(store={"sites": [
+        {"label": "Blog", "site_id": 2, "segment": "pageUrl=^https://blog.example.com"},
+    ], "active_site": "Blog"})
+    result = await handlers_settings.fn_view_domain(
+        ctx, ViewDomainParams(site_id=2, domain="All domains"),
+    )
+    assert result.status == "success"
+    s = await app_module.load_settings(ctx)
+    new_entry = s["sites"][-1]
+    assert "segment" not in new_entry
+    assert s["active_site"] == new_entry["label"]
+
+
+@pytest.mark.asyncio
+async def test_add_site_caches_known_domains(monkeypatch):
+    async def fake_site_info_for(ctx, site_id, segment=None):
+        return {"name": "Test", "main_url": "https://a.example.com",
+                "urls": ["https://a.example.com", "https://blog.example.com"]}
+
+    monkeypatch.setattr(handlers_settings, "site_info_for", fake_site_info_for)
+    ctx = _ctx(store={"sites": []})
+    await handlers_settings.fn_add_site(ctx, AddSiteParams(label="Main", site_id=2))
+    s = await app_module.load_settings(ctx)
+    assert s["sites"][0]["known_domains"] == ["https://a.example.com", "https://blog.example.com"]
+
+
+@pytest.mark.asyncio
+async def test_add_site_ignores_known_domains_lookup_failure(monkeypatch):
+    """add_site must still succeed even if the best-effort domain lookup fails."""
+    async def fake_site_info_for(ctx, site_id, segment=None):
+        return {"error": "backend down"}
+
+    monkeypatch.setattr(handlers_settings, "site_info_for", fake_site_info_for)
+    ctx = _ctx(store={"sites": []})
+    result = await handlers_settings.fn_add_site(ctx, AddSiteParams(label="Main", site_id=2))
+    assert result.status == "success"
+    s = await app_module.load_settings(ctx)
+    assert "known_domains" not in s["sites"][0]

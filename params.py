@@ -33,11 +33,19 @@ _SITE_HELP = (
     "user gave when adding it). Omit to use the user's default site."
 )
 
+_SITES_HELP = (
+    "Compare 2+ sites/domains side by side - a list of labels from list_sites, "
+    "e.g. ['Main', 'Blog']. When given, this replaces `site` and the result is "
+    "a per-site breakdown instead of a single answer. Omit for a normal, "
+    "single-site question."
+)
+
 
 class TrafficParams(BaseModel):
     period: Period = Field(default="day", description=_PERIOD_HELP)
     date: str = Field(default="last7", description=_DATE_HELP)
     site: str = Field(default="", description=_SITE_HELP)
+    sites: list[str] | None = Field(default=None, description=_SITES_HELP)
 
 
 class TopPagesParams(BaseModel):
@@ -45,11 +53,13 @@ class TopPagesParams(BaseModel):
     date: str = Field(default="today", description=_DATE_HELP)
     limit: int = Field(default=10, ge=1, le=100)
     site: str = Field(default="", description=_SITE_HELP)
+    sites: list[str] | None = Field(default=None, description=_SITES_HELP)
 
 
 class TrendsParams(BaseModel):
     """Compares the last 7 full days to the 7 before that."""
     site: str = Field(default="", description=_SITE_HELP)
+    sites: list[str] | None = Field(default=None, description=_SITES_HELP)
 
 
 class SaveSettingsParams(BaseModel):
@@ -87,6 +97,15 @@ class ListSitesParams(BaseModel):
 
 class SiteDomainsParams(BaseModel):
     site: str = Field(default="", description=_SITE_HELP)
+
+
+class ViewDomainParams(BaseModel):
+    site_id: int = Field(ge=1, description="Matomo site_id to pick a domain within (from site_domains/list_sites).")
+    domain: str = Field(
+        min_length=1, max_length=300,
+        description="One of the domains returned by site_domains for this site_id, or "
+                    "'All domains' to clear the filter and view the whole site again.",
+    )
 
 
 # ─── Audience / channel breakdown params — shared across handlers_audience.py

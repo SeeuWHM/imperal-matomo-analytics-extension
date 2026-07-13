@@ -4,10 +4,10 @@
 from imperal_sdk.types import ActionResult
 
 from app import chat, save_settings, load_settings, sites_with_active
-from api_client import call_mos
+from api_client import call_mos, site_info_for
 from params import (
     SaveSettingsParams, AddSiteParams, RemoveSiteParams, ListSitesParams,
-    SetActiveSiteParams, SiteDomainsParams,
+    SetActiveSiteParams, SiteDomainsParams, ViewDomainParams,
 )
 from response_models import SavedKeysResponse, SitesListResponse, SiteInfoResponse
 
@@ -57,6 +57,14 @@ async def fn_add_site(ctx, params: AddSiteParams) -> ActionResult:
     entry = {"label": params.label.strip(), "site_id": params.site_id}
     if params.segment.strip():
         entry["segment"] = params.segment.strip()
+
+    # Best-effort: cache the site_id's real domains so the panel's
+    # domain-level dropdown (view_domain) has options without a separate
+    # site_domains call. Never blocks add_site if this fails.
+    info = await site_info_for(ctx, params.site_id, entry.get("segment"))
+    if "error" not in info and info.get("urls"):
+        entry["known_domains"] = info["urls"]
+
     sites.append(entry)
     updates = {"sites": sites}
     if len(sites) == 1:
@@ -184,3 +192,54 @@ async def fn_site_domains(ctx, params: SiteDomainsParams) -> ActionResult:
         summary += (" To track one of them separately, use add_site with that domain's suggested "
                     "segment.")
     return ActionResult.success(data=data, summary=summary)
+
+
+@chat.function(
+    "view_domain",
+    description="Switch to viewing just one domain within a site/project whose Matomo site_id "
+                "covers several URL aliases (e.g. jump straight to a blog subdomain). Finds or "
+                "creates the matching site/project entry for that (site_id, domain) pair and makes "
+                "it the default - pass domain='All domains' to go back to the whole site. "
+                "Use for: покажи только блог, switch to domain X, view just this subdomain, "
+                "смотреть только на этот домен, только для домена.",
+    action_type="write",
+    chain_callable=True,
+    effects=["update:settings"],
+    event="analytics.settings.saved",
+    data_model=SitesListResponse,
+)
+async def fn_view_domain(ctx, params: ViewDomainParams) -> ActionResult:
+    """Resolve (site_id, domain) to a sites[] entry - reuse one that already
+    has this exact segment, or create one on the fly - then activate it."""
+    s = await load_settings(ctx)
+    sites = s.get("sites") or []
+    all_domains = params.domain.strip().lower() in ("", "all", "all domains")
+    segment = None if all_domains else f"pageUrl=^{params.domain.strip()}"
+
+    match = next((site for site in sites
+                  if int(site.get("site_id", 0)) == params.site_id
+                  and (site.get("segment") or None) == segment), None)
+    if match:
+        s = await save_settings(ctx, {"active_site": match["label"]})
+        return ActionResult.success(
+            data={"sites": sites_with_active(s)},
+            summary=f"Switched to '{match['label']}'.",
+            refresh_panels=["sidebar", "workspace", "analytics_hub"],
+        )
+
+    label = "All domains" if all_domains else params.domain.strip()
+    existing_labels = {site.get("label", "").strip().lower() for site in sites}
+    base_label, n = label, 2
+    while label.strip().lower() in existing_labels:
+        label = f"{base_label} ({n})"
+        n += 1
+    entry = {"label": label, "site_id": params.site_id}
+    if segment:
+        entry["segment"] = segment
+    updated_sites = sites + [entry]
+    s = await save_settings(ctx, {"sites": updated_sites, "active_site": label})
+    return ActionResult.success(
+        data={"sites": sites_with_active(s)},
+        summary=f"Now viewing '{label}'.",
+        refresh_panels=["sidebar", "workspace", "analytics_hub"],
+    )

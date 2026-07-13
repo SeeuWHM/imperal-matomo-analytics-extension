@@ -44,6 +44,34 @@ def _site_selector(s: dict) -> ui.UINode | None:
     )
 
 
+def _domain_selector(s: dict) -> ui.UINode | None:
+    """Second-level switcher: within the active site's Matomo project, jump
+    between the real domains it covers (from site_domains, cached on the
+    entry as known_domains at add_site time) - only shown when there are 2+
+    to pick between."""
+    sites = s.get("sites") or []
+    active_label = active_site_label(s)
+    active = next((site for site in sites if site.get("label") == active_label), None)
+    domains = (active or {}).get("known_domains") or []
+    if len(domains) < 2:
+        return None
+    segment = (active or {}).get("segment") or ""
+    current = segment[len("pageUrl=^"):] if segment.startswith("pageUrl=^") else "All domains"
+    return ui.Form(
+        action="view_domain",
+        submit_label="View",
+        defaults={"site_id": active["site_id"]},
+        children=[
+            ui.Select(
+                options=[{"value": "All domains", "label": "All domains"}]
+                        + [{"value": d, "label": d} for d in domains],
+                value=current,
+                param_name="domain",
+            ),
+        ],
+    )
+
+
 # ─────────────────────── Left sidebar ─────────────────────
 
 @ext.panel("sidebar", slot="left", title="Analytics", icon="BarChart3",
@@ -74,6 +102,7 @@ async def sidebar_panel(ctx):
     live = (rt.get("live_30m") or {}).get("visitors", 0) if not isinstance(rt, Exception) else 0
 
     site_selector = _site_selector(s)
+    domain_selector = _domain_selector(s)
     root = ui.Stack(children=[
         ui.Header(text="📊 Analytics", level=4),
         ui.Stack(children=[
@@ -81,6 +110,7 @@ async def sidebar_panel(ctx):
             ui.Text(content=host, variant="caption"),
         ], direction="h"),
         *([site_selector] if site_selector else []),
+        *([domain_selector] if domain_selector else []),
         ui.Divider(),
         ui.Stats(children=[
             ui.Stat(label="Live", value=str(live), color="violet", icon="Users"),

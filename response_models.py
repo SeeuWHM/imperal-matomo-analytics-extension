@@ -166,6 +166,7 @@ class SiteEntry(BaseModel):
     site_id: int = 0
     active: bool = False
     segment: Optional[str] = None
+    known_domains: list[str] = Field(default_factory=list)
 
 
 class SitesListResponse(BaseModel):

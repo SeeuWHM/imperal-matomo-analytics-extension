@@ -77,6 +77,22 @@
             "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
+          },
+          "sites": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Compare 2+ sites/domains side by side - a list of labels from list_sites, e.g. ['Main', 'Blog']. When given, this replaces `site` and the result is a per-site breakdown instead of a single answer. Omit for a normal, single-site question.",
+            "title": "Sites"
           }
         },
         "title": "TrafficParams",
@@ -210,6 +226,22 @@
             "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
+          },
+          "sites": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Compare 2+ sites/domains side by side - a list of labels from list_sites, e.g. ['Main', 'Blog']. When given, this replaces `site` and the result is a per-site breakdown instead of a single answer. Omit for a normal, single-site question.",
+            "title": "Sites"
           }
         },
         "title": "TopPagesParams",
@@ -321,6 +353,22 @@
             "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
+          },
+          "sites": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Compare 2+ sites/domains side by side - a list of labels from list_sites, e.g. ['Main', 'Blog']. When given, this replaces `site` and the result is a per-site breakdown instead of a single answer. Omit for a normal, single-site question.",
+            "title": "Sites"
           }
         },
         "title": "TrendsParams",
@@ -472,6 +520,13 @@
                 ],
                 "default": null,
                 "title": "Segment"
+              },
+              "known_domains": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Known Domains",
+                "type": "array"
               }
             },
             "title": "SiteEntry",
@@ -550,6 +605,13 @@
                 ],
                 "default": null,
                 "title": "Segment"
+              },
+              "known_domains": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Known Domains",
+                "type": "array"
               }
             },
             "title": "SiteEntry",
@@ -617,6 +679,13 @@
                 ],
                 "default": null,
                 "title": "Segment"
+              },
+              "known_domains": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Known Domains",
+                "type": "array"
               }
             },
             "title": "SiteEntry",
@@ -695,6 +764,13 @@
                 ],
                 "default": null,
                 "title": "Segment"
+              },
+              "known_domains": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Known Domains",
+                "type": "array"
               }
             },
             "title": "SiteEntry",
@@ -829,6 +905,99 @@
       "owner_chat_tool": "analytics"
     },
     {
+      "name": "view_domain",
+      "description": "Switch to viewing just one domain within a site/project whose Matomo site_id covers several URL aliases (e.g. jump straight to a blog subdomain). Finds or creates the matching site/project entry for that (site_id, domain) pair and makes it the default - pass domain='All domains' to go back to the whole site. Use for: покажи только блог, switch to domain X, view just this subdomain, смотреть только на этот домен, только для домена.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "update:settings"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "site_id": {
+            "description": "Matomo site_id to pick a domain within (from site_domains/list_sites).",
+            "minimum": 1,
+            "title": "Site Id",
+            "type": "integer"
+          },
+          "domain": {
+            "description": "One of the domains returned by site_domains for this site_id, or 'All domains' to clear the filter and view the whole site again.",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Domain",
+            "type": "string"
+          }
+        },
+        "required": [
+          "site_id",
+          "domain"
+        ],
+        "title": "ViewDomainParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "SiteEntry": {
+            "properties": {
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "site_id": {
+                "default": 0,
+                "title": "Site Id",
+                "type": "integer"
+              },
+              "active": {
+                "default": false,
+                "title": "Active",
+                "type": "boolean"
+              },
+              "segment": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Segment"
+              },
+              "known_domains": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Known Domains",
+                "type": "array"
+              }
+            },
+            "title": "SiteEntry",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "sites": {
+            "items": {
+              "$ref": "#/$defs/SiteEntry"
+            },
+            "title": "Sites",
+            "type": "array"
+          }
+        },
+        "title": "SitesListResponse",
+        "type": "object"
+      },
+      "event": "analytics.settings.saved",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "analytics"
+    },
+    {
       "name": "real_time",
       "description": "Live active visitors right now: 30 min / 60 min / 3 hour windows. Use for: сколько людей сейчас на сайте, онлайн посетители, live visitors, real-time, кто сейчас.",
       "action_type": "read",
@@ -842,6 +1011,22 @@
             "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
+          },
+          "sites": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Compare 2+ sites/domains side by side - a list of labels from list_sites, e.g. ['Main', 'Blog']. When given, this replaces `site` and the result is a per-site breakdown instead of a single answer. Omit for a normal, single-site question.",
+            "title": "Sites"
           }
         },
         "title": "_EmptyParams",
@@ -938,6 +1123,22 @@
             "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
+          },
+          "sites": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Compare 2+ sites/domains side by side - a list of labels from list_sites, e.g. ['Main', 'Blog']. When given, this replaces `site` and the result is a per-site breakdown instead of a single answer. Omit for a normal, single-site question.",
+            "title": "Sites"
           }
         },
         "title": "_PeriodParams",
@@ -1018,6 +1219,22 @@
             "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
+          },
+          "sites": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Compare 2+ sites/domains side by side - a list of labels from list_sites, e.g. ['Main', 'Blog']. When given, this replaces `site` and the result is a per-site breakdown instead of a single answer. Omit for a normal, single-site question.",
+            "title": "Sites"
           }
         },
         "title": "_PeriodParams",
@@ -1098,6 +1315,22 @@
             "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
+          },
+          "sites": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Compare 2+ sites/domains side by side - a list of labels from list_sites, e.g. ['Main', 'Blog']. When given, this replaces `site` and the result is a per-site breakdown instead of a single answer. Omit for a normal, single-site question.",
+            "title": "Sites"
           }
         },
         "title": "_PeriodParams",
@@ -1178,6 +1411,22 @@
             "description": "Which site/project to report on - a label from list_sites (the name the user gave when adding it). Omit to use the user's default site.",
             "title": "Site",
             "type": "string"
+          },
+          "sites": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Compare 2+ sites/domains side by side - a list of labels from list_sites, e.g. ['Main', 'Blog']. When given, this replaces `site` and the result is a per-site breakdown instead of a single answer. Omit for a normal, single-site question.",
+            "title": "Sites"
           }
         },
         "title": "_PeriodParams",

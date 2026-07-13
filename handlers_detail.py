@@ -7,12 +7,14 @@ from pydantic import BaseModel, Field
 
 from app import chat, ext, save_result
 from api_client import call_mos
-from params import _DATE_HELP, _PERIOD_HELP, _SITE_HELP
+from compare_render import compare_table, compare_summary
+from params import _DATE_HELP, _PERIOD_HELP, _SITE_HELP, _SITES_HELP
 from response_models import LiveVisitorsResponse, BreakdownResponse, EntryExitResponse
 
 
 class _EmptyParams(BaseModel):
     site: str = Field(default="", description=_SITE_HELP)
+    sites: list[str] | None = Field(default=None, description=_SITES_HELP)
 
 
 class _PeriodParams(BaseModel):
@@ -20,6 +22,7 @@ class _PeriodParams(BaseModel):
     date: str   = Field(default="today", description=_DATE_HELP)
     limit: int  = Field(default=10, ge=1, le=100)
     site: str   = Field(default="", description=_SITE_HELP)
+    sites: list[str] | None = Field(default=None, description=_SITES_HELP)
 
 
 def _err(data: dict) -> ActionResult:
@@ -33,9 +36,18 @@ def _err(data: dict) -> ActionResult:
                action_type="read", event="analytics.action.result", data_model=LiveVisitorsResponse)
 async def fn_real_time(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_real_time."""
-    data = await call_mos(ctx, "/api/matomo-analytics/real-time", {}, site=params.site)
+    data = await call_mos(ctx, "/api/matomo-analytics/real-time", {}, site=params.site, sites=params.sites)
     if "error" in data:
         return _err(data)
+
+    if "results" in data:
+        results = data["results"]
+        table = compare_table(results, [
+            ("30m", "Last 30m", lambda d: str((d.get("live_30m") or {}).get("visitors", 0))),
+            ("60m", "Last 60m", lambda d: str((d.get("live_60m") or {}).get("visitors", 0))),
+        ])
+        return ActionResult.success(data=data, summary=compare_summary(results), ui=table)
+
     await save_result(ctx, "real_time", "Live visitors", data)
     c30 = data.get("live_30m") or {}
     c60 = data.get("live_60m") or {}
@@ -63,9 +75,20 @@ async def fn_sources(ctx, params: _PeriodParams) -> ActionResult:
     """Handler: fn_sources."""
     data = await call_mos(ctx, "/api/matomo-analytics/sources", {
         "period": params.period, "date": params.date,
-    }, site=params.site)
+    }, site=params.site, sites=params.sites)
     if "error" in data:
         return _err(data)
+
+    if "results" in data:
+        results = data["results"]
+        def _top(d):
+            sources = d.get("sources") or []
+            return sources[0].get("label", "-") if sources else "-"
+        table = compare_table(results, [
+            ("top", "Top source", _top),
+        ])
+        return ActionResult.success(data=data, summary=compare_summary(results), ui=table)
+
     await save_result(ctx, "sources", "Traffic sources", data)
     sources = data.get("sources") or []
     top = (sources or [{}])[0]
@@ -93,9 +116,18 @@ async def fn_devices(ctx, params: _PeriodParams) -> ActionResult:
     """Return device type breakdown."""
     data = await call_mos(ctx, "/api/matomo-analytics/devices", {
         "period": params.period, "date": params.date,
-    }, site=params.site)
+    }, site=params.site, sites=params.sites)
     if "error" in data:
         return _err(data)
+
+    if "results" in data:
+        results = data["results"]
+        def _top(d):
+            devices = d.get("devices") or []
+            return f"{devices[0].get('label','-')} ({devices[0].get('percent',0)}%)" if devices else "-"
+        table = compare_table(results, [("top", "Top device", _top)])
+        return ActionResult.success(data=data, summary=compare_summary(results), ui=table)
+
     top = (data.get("devices") or [{}])[0]
     return ActionResult.success(
         data=data,
@@ -112,9 +144,18 @@ async def fn_geo(ctx, params: _PeriodParams) -> ActionResult:
     """Handler: fn_geo."""
     data = await call_mos(ctx, "/api/matomo-analytics/geo", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    }, site=params.site)
+    }, site=params.site, sites=params.sites)
     if "error" in data:
         return _err(data)
+
+    if "results" in data:
+        results = data["results"]
+        def _top(d):
+            countries = d.get("countries") or []
+            return countries[0].get("label", "-") if countries else "-"
+        table = compare_table(results, [("top", "Top country", _top)])
+        return ActionResult.success(data=data, summary=compare_summary(results), ui=table)
+
     await save_result(ctx, "geo", "Top countries", data)
     countries = data.get("countries") or []
     top = (countries or [{}])[0]
@@ -142,9 +183,18 @@ async def fn_entry_exit(ctx, params: _PeriodParams) -> ActionResult:
     """Return entry and exit page rankings."""
     data = await call_mos(ctx, "/api/matomo-analytics/entry-exit", {
         "period": params.period, "date": params.date, "limit": params.limit,
-    }, site=params.site)
+    }, site=params.site, sites=params.sites)
     if "error" in data:
         return _err(data)
+
+    if "results" in data:
+        results = data["results"]
+        table = compare_table(results, [
+            ("entry", "# entry pages", lambda d: str(len(d.get("entry_pages") or []))),
+            ("exit", "# exit pages", lambda d: str(len(d.get("exit_pages") or []))),
+        ])
+        return ActionResult.success(data=data, summary=compare_summary(results), ui=table)
+
     return ActionResult.success(
         data=data,
         summary=f"{len(data.get('entry_pages', []))} entry / {len(data.get('exit_pages', []))} exit pages",
