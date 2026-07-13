@@ -6,15 +6,20 @@ visits, trends, top pages, sources, devices, geo, audience insights and AI anoma
 
 **Full technical documentation (frontend + backend, verified against the live deploy):**
 [`docs/extension.md`](docs/extension.md) — read that file for architecture, the complete
-38-function chat inventory, panels, secrets/settings model, backend routes, and known gaps.
+39-function chat inventory, panels, secrets/settings model, backend routes, and known gaps.
 
 ## Quick facts
 
-- **Version:** 5.0.0 · **app_id:** `imperal-matomo-analytics-extension` · **Tool:** `analytics`
+- **Version:** 5.1.0 · **app_id:** `imperal-matomo-analytics-extension` · **Tool:** `analytics`
 - Matomo URL + Auth Token are entered via the platform's own Secrets panel (EXT-SECRETS-V1,
   per-user), not stored by the extension itself.
 - Multiple sites/projects supported — including two "projects" sharing one Matomo `site_id` via
   a per-site segment (e.g. `label="Blog", site_id=2, segment="pageUrl=^https://blog.example.com"`).
+  A domain-level dropdown (`view_domain`) switches between a site's real domains one click at a
+  time, using a `known_domains` cache populated from Matomo's own SitesManager at `add_site` time.
+- `traffic`/`top_pages`/`trends`/`sources`/`devices`/`geo`/`real_time`/`entry_exit` accept
+  `sites=[...]` (2+ labels) for a side-by-side comparison in one call - the backend fans targets
+  out concurrently itself, no separate "compare" endpoint.
 - Backend is a separate FastAPI service (`matomo-analytics-api`, api-server:8105, **not in this
   repo** — edited directly on the server) that does the actual Matomo REST API calls and SSRF
   hardening; the extension only resolves site/segment and renders results.

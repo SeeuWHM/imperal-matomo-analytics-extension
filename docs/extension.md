@@ -1,12 +1,22 @@
 # Matomo Analytics Connector — Full Documentation
 
-**Version:** 5.0.0 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
-**Git:** `github.com/SeeuWHM/imperal-matomo-analytics-extension` (branch `main`, latest commit `dd2fd70`)
+**Version:** 5.1.0 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
+**Git:** `github.com/SeeuWHM/imperal-matomo-analytics-extension` (branch `main`, latest commit `4923175`)
 **Live deploy status (as of writing):** `draft` — `reject_reason` on file is a **stale** message
 ("Does not meet quality standards") left over from an earlier, already-fixed review pass
-(`593585d6`, 14/18 checks). The manifest actually deployed right now (`updated_at
-2026-07-12T22:29:02`) is version 5.0.0 with 42 tools including `site_domains`/`set_active_site` —
-i.e. current. Resubmit for marketplace review; don't trust the reject_reason text as current.
+(`593585d6`, 14/18 checks). Resubmit for marketplace review; don't trust the reject_reason text
+as current.
+
+**2026-07-13 (v5.1.0):** the backend's per-site request contract changed from a single
+`site_id`/`segment` to a universal `targets: [{label, site_id, segment}]` list - every route
+(not just a new "compare" one) now serves either one site or a side-by-side comparison of several,
+fanned out concurrently server-side. `call_mos()` unwraps a single target back to the old flat
+shape, so this was invisible to every pre-existing handler; `sites=[...]` opts a chat function into
+the raw per-target list. Also fixed a real bug found while verifying this: `/geo` was silently
+returning zero countries whenever Matomo answered with its per-date nested shape (`period=day` +
+a multi-day `date` like `last7`) - it had its own extra `isinstance(rows, list)` guard that
+discarded that shape instead of letting `normalize_breakdown` flatten it like every other
+breakdown route already does correctly.
 
 This file supersedes the root `README.md`, which still describes the pre-refactor architecture
 (shared backend + `X-API-Key`, single `Site ID` field, `panels_main.py` that no longer exists,
@@ -20,8 +30,9 @@ version 4.0.6). Treat this document as the source of truth.
 User (panel / chat)
     │
     ▼
-Extension (this repo) — 38 @chat.function tools + 13 @ext.expose IPC + 4 @ext.skeleton + 1 @ext.schedule
-    │  api_client.call_mos(ctx, endpoint, extra, site="") — resolves site_id + per-site segment
+Extension (this repo) — 39 @chat.function tools + 13 @ext.expose IPC + 4 @ext.skeleton + 1 @ext.schedule
+    │  api_client.call_mos(ctx, endpoint, extra, site="", sites=None) — resolves each label to
+    │  {label, site_id, segment}, sends targets:[...] (1 or many, same shape either way)
     │  POST https://api.webhostmost.com/api/matomo-analytics/<endpoint>
     ▼
 matomo-analytics-api  (FastAPI, api-server, systemd unit `matomo-analytics-api`, :8105,
@@ -29,9 +40,20 @@ matomo-analytics-api  (FastAPI, api-server, systemd unit `matomo-analytics-api`,
                         /etc/nginx/sites-enabled/api-gateway.conf)
     │  no auth header checked on incoming requests — matomo_url/token travel in the POST body
     │  per-request SSRF validation on matomo_url (blocks localhost/private/loopback/link-local)
+    │  every route fans targets out concurrently (asyncio.gather) and returns
+    │  MultiResult{results:[{label, site_id, error, data}, ...]} - no separate "compare" routes
     ▼
 User's own Matomo instance — REST API (module=API, token_auth=<user's token>)
 ```
+
+**`call_mos()` return shape** (`api_client.py`): asking for exactly one target (the default -
+just `site`, or `sites` with one label) returns `results[0]["data"]` unwrapped, i.e. the exact
+flat shape every pre-existing handler already expects (`data.get("visits")`, `data.get("countries")`,
+...) - zero code changes needed anywhere that doesn't want a comparison. Asking for 2+ labels via
+`sites=[...]` returns the raw `{"results": [...]}` envelope instead; the caller renders it (see
+`compare_render.py`'s `compare_table()`, wired onto `traffic`/`top_pages`/`trends`/`sources`/
+`devices`/`geo`/`real_time`/`entry_exit`). Comparing "domains" that share one Matomo `site_id`
+works the same way - each entry in `sites=[...]` resolves through the normal per-site `segment`.
 
 **Not in git** — the backend (`matomo-analytics-api`) lives only on `api-server`
 (`/home/ext_server_webhostmost_com/matomo-analytics-api/`), edited via
@@ -57,7 +79,10 @@ call, and renders whatever comes back.
   - `matomo_segment: str` — account-wide fallback segment (used when a site has no segment of
     its own).
   - `utm_source_dim_id: int` — Custom Dimension ID for `utm_source`, 0 = disabled.
-  - `sites: list[{label: str, site_id: int, segment?: str}]` — the multi-site/multi-project list.
+  - `sites: list[{label: str, site_id: int, segment?: str, known_domains?: list[str]}]` — the
+    multi-site/multi-project list. `known_domains` is a best-effort cache of that site_id's real
+    URLs (from `SitesManager`, fetched once at `add_site` time) - it's what powers the domain-level
+    dropdown, and is never required for the entry to work.
   - `active_site: str` — label of the default site for chat/dashboard when no `site` is named.
 - **Legacy migration**: if `sites` is empty but a pre-multisite `matomo_site_id` field exists in
   the stored doc, `load_settings()` folds it into `sites` as `{"label": "Основной сайт",
@@ -78,6 +103,16 @@ separately even though `blog.example.com` is just one of many URL aliases under 
 `suggested_segments: [{domain, segment: "pageUrl=^<domain>"}]` for every configured URL — meant
 to be pasted straight into `add_site(label, site_id, segment=...)`.
 
+### Domain-level switcher (`view_domain`, `_domain_selector`)
+
+A second, narrower switcher than `set_active_site`: once a site is active, if it has 2+
+`known_domains`, both `panels_side.py` (sidebar) and `panels_settings_render.py` (settings form)
+show a second `ui.Select` populated straight from that cache - picking a domain (or "All domains")
+submits to `view_domain(site_id, domain)`, which finds an existing `sites` entry with that exact
+`(site_id, segment)` pair and activates it, or creates one on the fly (auto-labelled by the
+domain, de-duplicated against existing labels) - no `add_site` chat round-trip needed to look at
+just one domain within a project.
+
 ---
 
 ## File structure
@@ -90,16 +125,21 @@ app.py                     Extension + ChatExtension init; ext.secret() x2; SERV
                             (api.webhostmost.com, overridable via MATOMO_BACKEND_URL env);
                             load_settings/save_settings; matomo_ready(); resolve_site()/
                             resolve_site_id(); active_site_label(); sites_with_active()
-api_client.py               call_mos(ctx, endpoint, extra, timeout, site="") — the only place
-                            that talks HTTP to the backend
+api_client.py               call_mos(ctx, endpoint, extra, timeout, site="", sites=None) — the
+                            only place that talks HTTP to the backend; site_info_for(ctx, site_id,
+                            segment) — direct site-id lookup used by add_site (before that entry
+                            is resolvable by label)
+compare_render.py           compare_table()/compare_summary() — generic per-site comparison table
+                            shared by every sites=[...] render branch
 params.py                   all chat-function Pydantic param models + shared help-text constants
 response_models.py          all chat-function Pydantic response models (data_model= contracts)
 skeleton.py                 4 @ext.skeleton providers (see below)
-handlers_traffic.py         traffic, top_pages, trends (chat) + IPC: traffic, trends, top_pages,
-                            growing_pages, ai_referrers, matomo_config
+handlers_traffic.py         traffic, top_pages, trends (chat, all 3 accept sites=[...]) + IPC:
+                            traffic, trends, top_pages, growing_pages, ai_referrers, matomo_config
 handlers_settings.py        save_settings, add_site, remove_site, list_sites, set_active_site,
-                            site_domains
-handlers_detail.py          real_time, sources, devices, geo, entry_exit (chat) + matching IPC
+                            site_domains, view_domain
+handlers_detail.py          real_time, sources, devices, geo, entry_exit (chat, all accept
+                            sites=[...]) + matching IPC
 handlers_insights.py        insights, daily_report (background, uses AI), anomaly_check (chat)
                             + IPC: insights, daily_summary
 handlers_audience.py        ai_referrers, conversions, events, utm_sources, new_vs_returning,
@@ -112,7 +152,7 @@ handlers_reports.py         full_report (chat, background) + IPC: full_report
 audience_helpers.py         shared err()/table()/top() helpers for handlers_audience.py
 panels_center.py            @ext.panel("analytics_hub", slot="center") — full dashboard overlay
 panels_side.py              @ext.panel("sidebar", slot="left") + @ext.panel("workspace",
-                            slot="right"); _site_selector() compact switcher
+                            slot="right"); _site_selector() + _domain_selector() switchers
 panels_render.py            pure render helpers shared by the panels above (kpi_stats, chart,
                             pages_table, breakdown_table, entry_exit_table, result_zone,
                             _render_result_body — the big per-action switch)
@@ -127,40 +167,44 @@ tests/test_webbee_agent.py  Matomo-only agent-routing smoke tests
 ```
 
 All files are ≤300 lines (platform hard limit; verified `wc -l` at time of writing, max is
-`panels_render.py` at 278).
+`handlers_settings.py` at 245).
 
 ---
 
-## Chat functions (38) — full inventory
+## Chat functions (39) — full inventory
 
 `site` param (present on almost every read function): a label from `list_sites`; omit for the
-user's `active_site`. Params below are the actual Pydantic fields, not paraphrased.
+user's `active_site`. `sites` param (v5.1.0, on `traffic`/`top_pages`/`trends`/`sources`/`devices`/
+`geo`/`real_time`/`entry_exit`): a list of 2+ labels - triggers a comparison render instead of a
+single answer, and replaces `site` when given. Params below are the actual Pydantic fields, not
+paraphrased.
 
 ### Traffic & trends — `handlers_traffic.py`
 | Function | action_type | Params | Returns |
 |---|---|---|---|
-| `traffic` | read | `period, date, site` (`TrafficParams`) | `TrafficOverviewRecord` (visits, pageviews, unique_visitors, bounce_rate, avg_time_on_site, series) |
-| `top_pages` | read | `period, date, limit(1-100), site` (`TopPagesParams`) | `PageListResponse` |
-| `trends` | read | `site` (`TrendsParams`) — compares last 7 full days vs the 7 before | `TrendSummaryResponse` |
+| `traffic` | read | `period, date, site, sites` (`TrafficParams`) | `TrafficOverviewRecord` (visits, pageviews, unique_visitors, bounce_rate, avg_time_on_site, series) — or a comparison table if `sites` has 2+ labels |
+| `top_pages` | read | `period, date, limit(1-100), site, sites` (`TopPagesParams`) | `PageListResponse` (or comparison) |
+| `trends` | read | `site, sites` (`TrendsParams`) — compares last 7 full days vs the 7 before | `TrendSummaryResponse` (or comparison) |
 
 ### Site / project management — `handlers_settings.py`
 | Function | action_type | Params | Notes |
 |---|---|---|---|
 | `save_settings` | write | `matomo_segment, utm_source_dim_id` (`SaveSettingsParams`) | blank field = keep current value; never touches matomo_url/token |
-| `add_site` | write | `label(1-60), site_id(≥1), segment(optional,≤500)` (`AddSiteParams`) | replaces existing entry with same label; first site added becomes `active_site` automatically |
+| `add_site` | write | `label(1-60), site_id(≥1), segment(optional,≤500)` (`AddSiteParams`) | replaces existing entry with same label; first site added becomes `active_site` automatically; best-effort caches `known_domains` via `site_info_for` |
 | `remove_site` | destructive | `label` (`RemoveSiteParams`) | reassigns `active_site` to the next remaining site if the removed one was active |
 | `list_sites` | read | none | includes `active: bool` per site |
 | `set_active_site` | write | `label` (`SetActiveSiteParams`) | `refresh_panels=["sidebar","workspace","analytics_hub"]` |
 | `site_domains` | read | `site` (`SiteDomainsParams`) | ground-truth `main_url` + `urls[]` + `suggested_segments[]` from Matomo's SitesManager |
+| `view_domain` | write | `site_id, domain` (`ViewDomainParams`) | finds-or-creates the `sites` entry for `(site_id, pageUrl=^domain)` and activates it; `domain="All domains"` clears the segment |
 
 ### Real-time / breakdown detail — `handlers_detail.py`
 | Function | Params | Notes |
 |---|---|---|
-| `real_time` | `site` | live_30m/60m/180m visitor counts |
-| `sources` | `period, date, limit, site` | Direct/Search/Websites/Social merged |
-| `devices` | `period, date, limit, site` | desktop/mobile/tablet split |
-| `geo` | `period, date, limit, site` | countries |
-| `entry_exit` | `period, date, limit, site` | landing pages + exit pages |
+| `real_time` | `site, sites` | live_30m/60m/180m visitor counts (or comparison) |
+| `sources` | `period, date, limit, site, sites` | Direct/Search/Websites/Social merged (or comparison) |
+| `devices` | `period, date, limit, site, sites` | desktop/mobile/tablet split (or comparison) |
+| `geo` | `period, date, limit, site, sites` | countries (or comparison) - fixed in v5.1.0: was silently empty whenever Matomo returned its per-date nested shape (`period=day` + multi-day `date`) |
+| `entry_exit` | `period, date, limit, site, sites` | landing pages + exit pages (or comparison) |
 
 ### Insights — `handlers_insights.py`
 | Function | Notes |
@@ -210,16 +254,18 @@ filtered to `/blog`).
 
 | Panel id | Slot | File | States |
 |---|---|---|---|
-| `sidebar` | left | `panels_side.py` | offline (not configured) · online (live/today/yesterday stats + `_site_selector()` if 2+ sites + "Open Dashboard" button, auto-opens center panel on load) |
+| `sidebar` | left | `panels_side.py` | offline (not configured) · online (live/today/yesterday stats + `_site_selector()` if 2+ sites + `_domain_selector()` if the active site has 2+ `known_domains` + "Open Dashboard" button, auto-opens center panel on load) |
 | `workspace` | right | `panels_side.py` | not-configured (settings form) · loaded (result_zone for last chat result + KPIs + 7 detail Sections including embedded settings) |
 | `analytics_hub` | center overlay | `panels_center.py` | `view="close"` empty · `view="settings"` (settings_form) · default (7-metric KPI row, 30-day chart, top pages, sources, devices; site badge shown once 2+ sites exist) |
 
 `_render_result_body()` in `panels_render.py` is the single dispatch point that turns a chat
 result's `action` name into a rendered body for `result_zone` — every chat function's result
 needs a case here or it falls back to a generic "Result ready." empty state. Current cases cover
-all 38 functions except the pure site-management ones (`add_site`/`remove_site`/`list_sites`/
-`set_active_site` don't render a body themselves — their `refresh_panels`/`event` triggers a
-panel re-render instead of a result card).
+all 39 functions except the pure site-management ones (`add_site`/`remove_site`/`list_sites`/
+`set_active_site`/`view_domain` don't render a body themselves — their `refresh_panels`/`event`
+triggers a panel re-render instead of a result card). The 8 `sites=[...]`-enabled functions render
+their comparison via `compare_render.compare_table()` directly in the handler's own `ui=`, not
+through this dispatch point.
 
 ---
 
@@ -249,6 +295,15 @@ token, method, params)` — POSTs `module=API&format=JSON&token_auth=...&method=
 localhost/`0.0.0.0`/private/loopback/link-local/multicast hosts (literal check + DNS resolution
 check). No auth header is checked on the FastAPI side — every request must carry the caller's own
 `matomo_url`+`token`, which only the extension (via the user's `ctx.secrets`) has.
+
+**Request contract (v5.1.0)**: every route below (except `/health`) takes `targets: [{label,
+site_id, segment?}]` instead of a single `site_id`/`segment`, and returns `MultiResult{results:
+[{label, site_id, error, data}, ...]}` - one entry per target, fanned out concurrently
+(`asyncio.gather`) via a shared `_fan_out()` helper in `analytics.py`. A single-target request
+(the common case) is just `targets` with one entry; the extension's `call_mos()` unwraps that back
+to a flat dict, so nothing else in this doc changes shape-wise for single-site use. `insights` and
+`full_report` pass `req.targets` straight through to the routes they call internally, so they're
+multi-target too without any extra plumbing.
 
 **Routes** (31 total, all `POST` except `/health`):
 `/health` (GET) · `/traffic` · `/trends` · `/top-pages` · `/sources` · `/devices` · `/geo` ·
@@ -283,7 +338,10 @@ there is no plain `nb_visits` on this method); `visit_duration`→
 `last7`) nests `VisitsSummary.get`/`Goals.get`/`VisitFrequency.get`/`Events.getCategory`
 responses per-date instead of returning one flat object — normalizers detect this
 (`all(isinstance(v, dict) ...)`) and aggregate across buckets rather than reading only the first
-level.
+level. `/geo` used to have its own extra `rows if isinstance(rows, list) else []` guard that
+discarded exactly this nested shape instead of letting `normalize_breakdown`/`_rows_from_payload`
+flatten it like every other breakdown route already did - fixed 2026-07-13 (verified live: went
+from 0 countries to 93/114 real countries for the two test sites on `period=day&date=last7`).
 
 ---
 
@@ -294,7 +352,7 @@ Run via the shared venv (no per-extension venv exists):
 source /home/ignat/Nextcloud/MCP-Configs/Imperal-Extensions-MCP/SeeU-Extensions/.venv-ext/bin/activate
 python -m pytest tests/ -v
 ```
-As of `dd2fd70`: **36 passed, 20 skipped** (skips are backend live-integration tests, gated on
+As of `4923175`: **45 passed, 20 skipped** (skips are backend live-integration tests, gated on
 `MATOMO_ANALYTICS_API_URL`/`MATOMO_URL`/`MATOMO_TOKEN` env vars — not failures). Covers:
 load/save settings, secrets never leaking into `ctx.store`, legacy single-site migration,
 `resolve_site`/`resolve_site_id`/`active_site_label`/`sites_with_active`, per-site segment
@@ -302,7 +360,9 @@ resolution and precedence over the account-wide segment, add/remove/list/set-act
 (including active-site reassignment on removal), `site_domains` success + suggested-segment
 generation + config-missing error path, `call_mos` site/segment resolution, traffic/top_pages/
 trends happy-path + config-missing, the `geo` "countries" key regression, `ipc_matomo_config`
-non-leak, and the conversions "no named goals" fallback message.
+non-leak, the conversions "no named goals" fallback message, `call_mos`'s single-target unwrap +
+multi-target passthrough (incl. per-target error shape), a comparison-render smoke test, and
+`view_domain` (create/reuse/all-domains + `add_site`'s best-effort `known_domains` cache).
 
 ---
 
