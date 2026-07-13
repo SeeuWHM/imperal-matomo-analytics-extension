@@ -1,6 +1,6 @@
 # Matomo Analytics Connector — Full Documentation
 
-**Version:** 5.1.0 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
+**Version:** 5.2.0 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
 **Git:** `github.com/SeeuWHM/imperal-matomo-analytics-extension` (branch `main`, latest commit `4923175`)
 **Live deploy status (as of writing):** `draft` — `reject_reason` on file is a **stale** message
 ("Does not meet quality standards") left over from an earlier, already-fixed review pass
@@ -18,6 +18,14 @@ a multi-day `date` like `last7`) - it had its own extra `isinstance(rows, list)`
 discarded that shape instead of letting `normalize_breakdown` flatten it like every other
 breakdown route already does correctly.
 
+**2026-07-13 (v5.2.0):** fixed `view_domain` - it was find-or-creating a `sites` entry per domain,
+which polluted the project/site_id selector with fake per-domain "sites" instead of showing just
+the real Matomo projects. It now only ever updates the existing project's own `segment` in place;
+`add_site` remains the only function that grows `sites`. Also exposed 4 new IPC functions
+(`organic_keywords`, `site_search`, `page_details`, `entry_exit`) as lightweight, individually
+callable content-strategy signals - previously only reachable via chat, or bundled inside the
+slow `full_report`.
+
 This file supersedes the root `README.md`, which still describes the pre-refactor architecture
 (shared backend + `X-API-Key`, single `Site ID` field, `panels_main.py` that no longer exists,
 version 4.0.6). Treat this document as the source of truth.
@@ -30,7 +38,7 @@ version 4.0.6). Treat this document as the source of truth.
 User (panel / chat)
     │
     ▼
-Extension (this repo) — 39 @chat.function tools + 13 @ext.expose IPC + 4 @ext.skeleton + 1 @ext.schedule
+Extension (this repo) — 39 @chat.function tools + 17 @ext.expose IPC + 4 @ext.skeleton + 1 @ext.schedule
     │  api_client.call_mos(ctx, endpoint, extra, site="", sites=None) — resolves each label to
     │  {label, site_id, segment}, sends targets:[...] (1 or many, same shape either way)
     │  POST https://api.webhostmost.com/api/matomo-analytics/<endpoint>
@@ -148,6 +156,7 @@ handlers_traffic.py         traffic, top_pages, trends (chat, all 3 accept sites
 handlers_settings.py        save_settings, add_site, remove_site, list_sites, set_active_site,
                             site_domains, view_domain
 handlers_detail.py          real_time, sources, devices, geo, entry_exit (chat, all accept
+                            sites=[...]) + IPC (entry_exit added v5.2.0):
                             sites=[...]) + matching IPC
 handlers_insights.py        insights, daily_report (background, uses AI), anomaly_check (chat)
                             + IPC: insights, daily_summary
@@ -243,16 +252,24 @@ budget (`HEAVY_TIMEOUT` in `api_client.py`).
 
 ---
 
-## Cross-extension IPC (`@ext.expose`, 13 functions)
+## Cross-extension IPC (`@ext.expose`, 17 functions)
 
 Other extensions call these via `ctx.extensions.call("analytics", "<name>", ...)` — never the raw
 Matomo credentials. `matomo_config` deliberately returns only `{configured, sites, active_site,
 matomo_segment}`, no `matomo_url`/`matomo_token` (regression-tested:
 `test_ipc_matomo_config_does_not_leak_token`).
 
-`real_time, sources, devices, geo` (`handlers_detail.py`) · `traffic, trends, top_pages,
-growing_pages, ai_referrers, matomo_config` (`handlers_traffic.py`) · `insights, daily_summary`
-(`handlers_insights.py`) · `full_report` (`handlers_reports.py`).
+`real_time, sources, devices, geo, entry_exit` (`handlers_detail.py`) · `traffic, trends,
+top_pages, growing_pages, ai_referrers, matomo_config` (`handlers_traffic.py`) · `insights,
+daily_summary` (`handlers_insights.py`) · `full_report` (`handlers_reports.py`) ·
+`organic_keywords` (`handlers_channels.py`) · `site_search, page_details`
+(`handlers_demographics.py`).
+
+**Content-strategy signals (v5.2.0)**: `organic_keywords`, `site_search`, `page_details`, and
+`entry_exit` were added specifically so a content/article-writing extension can pull them directly
+and cheaply, without paying for the ~90s `full_report` fan-out (which already contained this data,
+just bundled and slow). `site_search`'s `no_results` is the sharpest one - a zero-result on-site
+search term is a visitor proving there's demand for content that doesn't exist yet.
 
 `growing_pages` computes real month-over-month page growth (no longer hardcoded to 0, no longer
 filtered to `/blog`).
@@ -361,7 +378,7 @@ Run via the shared venv (no per-extension venv exists):
 source /home/ignat/Nextcloud/MCP-Configs/Imperal-Extensions-MCP/SeeU-Extensions/.venv-ext/bin/activate
 python -m pytest tests/ -v
 ```
-As of `4923175`: **46 passed, 20 skipped** (skips are backend live-integration tests, gated on
+As of `4923175`: **50 passed, 20 skipped** (skips are backend live-integration tests, gated on
 `MATOMO_ANALYTICS_API_URL`/`MATOMO_URL`/`MATOMO_TOKEN` env vars — not failures). Covers:
 load/save settings, secrets never leaking into `ctx.store`, legacy single-site migration,
 `resolve_site`/`resolve_site_id`/`active_site_label`/`sites_with_active`, per-site segment

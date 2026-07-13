@@ -7,7 +7,7 @@ handlers_channels.py) to stay under the 300-line file limit."""
 from imperal_sdk import ui
 from imperal_sdk.types import ActionResult
 
-from app import chat, save_result
+from app import chat, ext, save_result
 from api_client import call_mos
 from params import AudienceParams
 from response_models import BreakdownResponse, SiteSearchResponse
@@ -212,3 +212,31 @@ async def fn_outlinks(ctx, params: AudienceParams) -> ActionResult:
         summary=f"Top outlink: {lbl} ({pct}% of clicks)",
         ui=table(items, "URL"),
     )
+
+
+# ─── IPC — other extensions call these to compose cross-ext reports ─────────
+
+@ext.expose("site_search")
+async def ipc_site_search(ctx, period: str = "month", date: str = "today",
+                           limit: int = 20, site: str = "") -> ActionResult:
+    """Internal site-search terms, including zero-result queries - the
+    clearest signal for content that doesn't exist yet but visitors want."""
+    data = await call_mos(ctx, "/api/matomo-analytics/site-search", {
+        "period": period, "date": date, "limit": limit,
+    }, site=site)
+    if "error" in data:
+        return err(data)
+    return ActionResult.success(data=data, summary="Site search terms fetched.")
+
+
+@ext.expose("page_details")
+async def ipc_page_details(ctx, period: str = "month", date: str = "today",
+                            limit: int = 20, site: str = "") -> ActionResult:
+    """Per-page bounce rate and time-on-page - flags existing content that
+    needs a rewrite/refresh."""
+    data = await call_mos(ctx, "/api/matomo-analytics/page-details", {
+        "period": period, "date": date, "limit": limit,
+    }, site=site)
+    if "error" in data:
+        return err(data)
+    return ActionResult.success(data=data, summary="Page details fetched.")

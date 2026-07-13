@@ -2,7 +2,7 @@
   "manifest_schema_version": 3,
   "sdk_version": "5.9.3",
   "app_id": "imperal-matomo-analytics-extension",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "name": "Matomo Analytics Connector",
   "description": "Traffic analytics dashboard for one or more Matomo instances: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection — track multiple sites/projects side by side.",
   "icon": "icon.svg",
@@ -906,7 +906,7 @@
     },
     {
       "name": "view_domain",
-      "description": "Switch to viewing just one domain within a site/project whose Matomo site_id covers several URL aliases (e.g. jump straight to a blog subdomain). Finds or creates the matching site/project entry for that (site_id, domain) pair and makes it the default - pass domain='All domains' to go back to the whole site. Use for: покажи только блог, switch to domain X, view just this subdomain, смотреть только на этот домен, только для домена.",
+      "description": "Scope the CURRENT site/project down to one domain, when its Matomo site_id covers several URL aliases (e.g. jump straight to a blog subdomain within the same project) - pass domain='All domains' to go back to the whole site. This updates that project's own segment in place, it does NOT add a new site/project (use add_site for that, to give a sub-project its own permanent label). Use for: покажи только блог, switch to domain X, view just this subdomain, смотреть только на этот домен, только для домена.",
       "action_type": "write",
       "chain_callable": true,
       "effects": [
@@ -3506,11 +3506,27 @@
       "action_type": "read"
     },
     {
+      "name": "entry_exit",
+      "action_type": "read"
+    },
+    {
       "name": "insights",
       "action_type": "read"
     },
     {
       "name": "daily_summary",
+      "action_type": "read"
+    },
+    {
+      "name": "organic_keywords",
+      "action_type": "read"
+    },
+    {
+      "name": "site_search",
+      "action_type": "read"
+    },
+    {
+      "name": "page_details",
       "action_type": "read"
     },
     {

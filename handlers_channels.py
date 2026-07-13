@@ -9,7 +9,7 @@ the 300-line file limit."""
 from imperal_sdk import ui
 from imperal_sdk.types import ActionResult
 
-from app import chat, save_result
+from app import chat, ext, save_result
 from api_client import call_mos
 from params import AudienceParams
 from response_models import BreakdownResponse, BrowsersResponse
@@ -153,5 +153,20 @@ async def fn_campaigns(ctx, params: AudienceParams) -> ActionResult:
         summary=f"Top campaign: {lbl} ({pct}%)",
         ui=table(items, "Campaign"),
     )
+
+
+# ─── IPC — other extensions call this to compose cross-ext reports ───────────
+
+@ext.expose("organic_keywords")
+async def ipc_organic_keywords(ctx, period: str = "month", date: str = "today",
+                                limit: int = 20, site: str = "") -> ActionResult:
+    """Organic keywords already bringing traffic - a content-strategy signal
+    for expanding topical coverage around what's already ranking."""
+    data = await call_mos(ctx, "/api/matomo-analytics/keywords", {
+        "period": period, "date": date, "limit": limit,
+    }, site=site)
+    if "error" in data:
+        return err(data)
+    return ActionResult.success(data=data, summary="Organic keywords fetched.")
 
 

@@ -239,3 +239,14 @@ async def ipc_geo(ctx, period: str = "week", date: str = "today", limit: int = 1
     if "error" in data:
         return _err(data)
     return ActionResult.success(data=data, summary="Geo breakdown fetched.")
+
+
+@ext.expose("entry_exit")
+async def ipc_entry_exit(ctx, period: str = "week", date: str = "today", limit: int = 10, site: str = "") -> ActionResult:
+    """Landing pages (where sessions start) + exit pages (where visitors leave)."""
+    data = await call_mos(ctx, "/api/matomo-analytics/entry-exit", {
+        "period": period, "date": date, "limit": limit,
+    }, site=site)
+    if "error" in data:
+        return _err(data)
+    return ActionResult.success(data=data, summary="Entry/exit pages fetched.")

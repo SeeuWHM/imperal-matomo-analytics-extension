@@ -23,6 +23,8 @@ import handlers_traffic
 import handlers_settings
 import handlers_detail
 import handlers_audience
+import handlers_channels
+import handlers_demographics
 import app as app_module
 from params import (
     TrafficParams, TopPagesParams, TrendsParams, SaveSettingsParams,
@@ -610,3 +612,53 @@ async def test_add_site_ignores_known_domains_lookup_failure(monkeypatch):
     assert result.status == "success"
     s = await app_module.load_settings(ctx)
     assert "known_domains" not in s["sites"][0]
+
+
+# ─── new IPC exposes — content-gap signals for cross-extension consumers ────
+
+@pytest.mark.asyncio
+async def test_ipc_organic_keywords(monkeypatch):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
+        assert endpoint == "/api/matomo-analytics/keywords"
+        return {"keywords": [{"label": "matomo hosting", "visits": 5, "percent": 100.0}]}
+
+    monkeypatch.setattr(handlers_channels, "call_mos", fake_call)
+    result = await handlers_channels.ipc_organic_keywords(_ctx())
+    assert result.status == "success"
+    assert result.data["keywords"][0]["label"] == "matomo hosting"
+
+
+@pytest.mark.asyncio
+async def test_ipc_site_search(monkeypatch):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
+        assert endpoint == "/api/matomo-analytics/site-search"
+        return {"keywords": [], "no_results": [{"label": "docker hosting", "visits": 3, "percent": 100.0}]}
+
+    monkeypatch.setattr(handlers_demographics, "call_mos", fake_call)
+    result = await handlers_demographics.ipc_site_search(_ctx())
+    assert result.status == "success"
+    assert result.data["no_results"][0]["label"] == "docker hosting"
+
+
+@pytest.mark.asyncio
+async def test_ipc_page_details(monkeypatch):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
+        assert endpoint == "/api/matomo-analytics/page-details"
+        return {"pages": [{"url": "/old-post", "visits": 10, "avg_time_on_page": 5, "bounce_rate": "90%"}]}
+
+    monkeypatch.setattr(handlers_demographics, "call_mos", fake_call)
+    result = await handlers_demographics.ipc_page_details(_ctx())
+    assert result.status == "success"
+    assert result.data["pages"][0]["bounce_rate"] == "90%"
+
+
+@pytest.mark.asyncio
+async def test_ipc_entry_exit(monkeypatch):
+    async def fake_call(ctx, endpoint, extra=None, site="", sites=None):
+        assert endpoint == "/api/matomo-analytics/entry-exit"
+        return {"entry_pages": [{"url": "/"}], "exit_pages": [{"url": "/pricing"}]}
+
+    monkeypatch.setattr(handlers_detail, "call_mos", fake_call)
+    result = await handlers_detail.ipc_entry_exit(_ctx())
+    assert result.status == "success"
+    assert result.data["entry_pages"][0]["url"] == "/"
