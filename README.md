@@ -10,7 +10,7 @@ visits, trends, top pages, sources, devices, geo, audience insights and AI anoma
 
 ## Quick facts
 
-- **Version:** 5.2.2 · **app_id:** `imperal-matomo-analytics-extension` · **Tool:** `analytics`
+- **Version:** 5.2.3 · **app_id:** `imperal-matomo-analytics-extension` · **Tool:** `analytics`
 - Matomo URL + Auth Token are entered via the platform's own Secrets panel (EXT-SECRETS-V1,
   per-user), not stored by the extension itself.
 - Multiple sites/projects supported — including two "projects" sharing one Matomo `site_id` via

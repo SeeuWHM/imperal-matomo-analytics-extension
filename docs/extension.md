@@ -1,6 +1,6 @@
 # Matomo Analytics Connector — Full Documentation
 
-**Version:** 5.2.2 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
+**Version:** 5.2.3 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
 **Git:** `github.com/SeeuWHM/imperal-matomo-analytics-extension` (branch `main`, latest commit `4923175`)
 **Live deploy status (as of writing):** `draft` — `reject_reason` on file is a **stale** message
 ("Does not meet quality standards") left over from an earlier, already-fixed review pass
@@ -36,6 +36,19 @@ cached version across deploys instead of picking up the new one.
 **2026-07-13 (backend hotfix, no extension version bump):** fixed the traffic chart's `pv`
 (pageviews) series always showing 0 - see "Known gaps" below, this was a long-standing bug not
 introduced by any of the above. Backend-only, already live.
+
+**2026-07-13 (v5.2.3):** the sidebar STILL failed to render after v5.2.2 - the v5.2.2 fix addressed
+one real bug (write-during-render) but there was a second one: `panels_center.py` did
+`from panels_side import _domain_selector`, a cross-file import between two panel modules that
+didn't exist anywhere else in this codebase (sidebar/settings/hub each keep independent copies of
+similar selectors, by established convention). If a hot-reload cycle re-imports one panel module in
+isolation, that import can fail - and since `main.py` imports `panels_side` then `panels_center`
+sequentially at module scope, a failure partway through can leave neither panel registered,
+explaining why the *sidebar* (defined in the file imported first) disappeared even though the bug
+was in `panels_center.py`. Fixed by duplicating the ~20-line `_domain_selector` into
+`panels_center.py` instead of importing it - unverified against the platform's actual reload
+internals (no direct access to the runtime), but removes the only structural oddity in this diff
+that had no precedent elsewhere in the codebase.
 
 This file supersedes the root `README.md`, which still describes the pre-refactor architecture
 (shared backend + `X-API-Key`, single `Site ID` field, `panels_main.py` that no longer exists,

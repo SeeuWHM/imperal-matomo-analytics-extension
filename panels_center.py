@@ -9,10 +9,37 @@ from app import ext, load_settings, matomo_ready, active_site_label
 from api_client import call_mos, ensure_known_domains
 from panels_render import kpi_stats, chart, pages_table, breakdown_table
 from panels_settings_render import settings_form
-from panels_side import _domain_selector
 
 
 REFRESH = "on_event:analytics.action.result"
+
+
+def _domain_selector(s: dict) -> ui.UINode | None:
+    """Same domain-level switcher as panels_side.py's sidebar - kept as an
+    independent copy rather than a cross-file import, matching this
+    codebase's existing pattern (sidebar/settings each have their own copy
+    of similar selectors) rather than coupling panel modules together."""
+    sites = s.get("sites") or []
+    active_label = active_site_label(s)
+    active = next((site for site in sites if site.get("label") == active_label), None)
+    domains = (active or {}).get("known_domains") or []
+    if len(domains) < 2:
+        return None
+    segment = (active or {}).get("segment") or ""
+    current = segment[len("pageUrl=^"):] if segment.startswith("pageUrl=^") else "All domains"
+    return ui.Form(
+        action="view_domain",
+        submit_label="View",
+        defaults={"site_id": active["site_id"]},
+        children=[
+            ui.Select(
+                options=[{"value": "All domains", "label": "All domains"}]
+                        + [{"value": d, "label": d} for d in domains],
+                value=current,
+                param_name="domain",
+            ),
+        ],
+    )
 
 
 @ext.panel("analytics_hub", slot="center", title="Analytics Dashboard",

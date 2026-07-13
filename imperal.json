@@ -2,7 +2,7 @@
   "manifest_schema_version": 3,
   "sdk_version": "5.9.3",
   "app_id": "imperal-matomo-analytics-extension",
-  "version": "5.2.2",
+  "version": "5.2.3",
   "name": "Matomo Analytics Connector",
   "description": "Traffic analytics dashboard for one or more Matomo instances: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection — track multiple sites/projects side by side.",
   "icon": "icon.svg",
