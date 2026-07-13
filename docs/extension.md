@@ -321,6 +321,14 @@ FastAPI app, `app/main.py` entry (`uvicorn app.main:app --port 8105`), router pr
 token, method, params)` — POSTs `module=API&format=JSON&token_auth=...&method=...`),
 `app/core/normalizers.py` (generic row/aggregation helpers shared across routes).
 
+**Fixed 2026-07-13**: `/real-time`'s 3 `Live.getCounters` calls never forwarded `segment` (every
+other route already did) - so switching the domain-level dropdown correctly re-scoped every other
+metric but "Live" always stayed pinned to the whole site_id. Verified live: an unmatchable segment
+now correctly returns 0/0/0 instead of the whole-site count. A full pass over every `client.call()`
+in this file (parenthesis-matched, not just grep) confirms this was the only route missing it -
+`SitesManager.getSiteFromId`/`getSiteUrlsFromId` (site metadata) and `Goals.getGoals` (goal
+definitions, not data) are correctly segment-less by nature.
+
 **Security**: `MatomoContextRequest.matomo_url` has a `field_validator` blocking
 localhost/`0.0.0.0`/private/loopback/link-local/multicast hosts (literal check + DNS resolution
 check). No auth header is checked on the FastAPI side — every request must carry the caller's own
