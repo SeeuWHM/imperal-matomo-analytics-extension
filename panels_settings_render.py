@@ -45,26 +45,6 @@ def sites_list(s: dict) -> ui.UINode:
         ],
     ) if len(sites) > 1 else None
 
-    active_site = next((site for site in sites if site.get("label") == active), None)
-    domains = (active_site or {}).get("known_domains") or []
-    domain_form = None
-    if len(domains) > 1:
-        segment = (active_site or {}).get("segment") or ""
-        current = segment[len("pageUrl=^"):] if segment.startswith("pageUrl=^") else "All domains"
-        domain_form = ui.Form(
-            action="view_domain",
-            submit_label="View domain",
-            defaults={"site_id": active_site["site_id"]},
-            children=[
-                ui.Select(
-                    options=[{"value": "All domains", "label": "All domains"}]
-                            + [{"value": d, "label": d} for d in domains],
-                    value=current,
-                    param_name="domain",
-                ),
-            ],
-        )
-
     remove_form = ui.Form(
         action="remove_site",
         submit_label="Remove site",
@@ -76,8 +56,6 @@ def sites_list(s: dict) -> ui.UINode:
     children = [table, add_form]
     if switch_form:
         children.append(switch_form)
-    if domain_form:
-        children.append(domain_form)
     if remove_form:
         children.append(remove_form)
     return ui.Stack(children=children)
@@ -98,8 +76,6 @@ def settings_form(s: dict) -> ui.UINode:
         action="save_settings",
         submit_label="Save settings",
         children=[
-            ui.Input(placeholder="Segment (optional) - pageUrl=^https://blog.example.com",
-                     value=s.get("matomo_segment", ""), param_name="matomo_segment"),
             ui.Input(placeholder="UTM source Dimension ID (optional) - e.g. 8",
                      value=str(s.get("utm_source_dim_id") or ""), param_name="utm_source_dim_id"),
         ],
