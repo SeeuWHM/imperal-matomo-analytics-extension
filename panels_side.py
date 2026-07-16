@@ -104,8 +104,9 @@ async def sidebar_panel(ctx):
     yesterday = series[-2].get("visits", 0) if len(series) >= 2 else 0
     live = (rt.get("live_30m") or {}).get("visitors", 0) if not isinstance(rt, Exception) else 0
 
+    # Domain switcher lives only on the center dashboard now (it used to appear
+    # here too, duplicating the same control). The site/project switcher stays.
     site_selector = _site_selector(s)
-    domain_selector = _domain_selector(s)
     root = ui.Stack(children=[
         ui.Header(text="📊 Analytics", level=4),
         ui.Stack(children=[
@@ -113,7 +114,6 @@ async def sidebar_panel(ctx):
             ui.Text(content=host, variant="caption"),
         ], direction="h"),
         *([site_selector] if site_selector else []),
-        *([domain_selector] if domain_selector else []),
         ui.Divider(),
         ui.Stats(children=[
             ui.Stat(label="Live", value=str(live), color="violet", icon="Users"),

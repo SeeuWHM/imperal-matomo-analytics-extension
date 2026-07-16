@@ -26,7 +26,7 @@ SERVER_URL = os.environ.get("MATOMO_BACKEND_URL", "") or "https://api.webhostmos
 
 ext = Extension(
     "imperal-matomo-analytics-extension",
-    version="5.2.4",
+    version="5.2.5",
     display_name="Matomo Analytics Connector",
     description="Traffic analytics dashboard: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection from your Matomo instance. Track multiple sites/projects under one Matomo account.",
     icon="icon.svg",
