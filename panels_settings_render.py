@@ -31,9 +31,6 @@ def sites_list(s: dict) -> ui.UINode:
         children=[
             ui.Input(placeholder="Label - e.g. Main Website, Site 2", param_name="label"),
             ui.Input(placeholder="Matomo site_id - e.g. 1", param_name="site_id"),
-            ui.Input(placeholder="Segment (optional, use site_domains for suggestions) - "
-                                  "e.g. pageUrl=^https://blog.example.com",
-                     param_name="segment"),
         ],
     )
     switch_form = ui.Form(

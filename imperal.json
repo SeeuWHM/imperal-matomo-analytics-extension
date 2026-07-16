@@ -1,8 +1,8 @@
 {
   "manifest_schema_version": 3,
-  "sdk_version": "5.9.3",
+  "sdk_version": "5.9.6",
   "app_id": "imperal-matomo-analytics-extension",
-  "version": "5.2.3",
+  "version": "5.2.4",
   "name": "Matomo Analytics Connector",
   "description": "Traffic analytics dashboard for one or more Matomo instances: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection — track multiple sites/projects side by side.",
   "icon": "icon.svg",
@@ -3551,14 +3551,16 @@
       "description": "Your Matomo instance URL, e.g. https://analytics.example.com",
       "required": true,
       "write_mode": "user",
-      "max_bytes": 500
+      "max_bytes": 500,
+      "scope": "user"
     },
     {
       "name": "matomo_token",
       "description": "Matomo Auth Token — Matomo → Personal → Security → Auth tokens",
       "required": true,
       "write_mode": "user",
-      "max_bytes": 200
+      "max_bytes": 200,
+      "scope": "user"
     }
   ],
   "panels": [
@@ -3566,25 +3568,39 @@
       "panel_id": "secrets",
       "slot": "right",
       "title": "Secrets",
-      "tree": {}
+      "tree": {},
+      "icon": "KeyRound",
+      "refresh": "manual",
+      "center_overlay": false
     },
     {
       "panel_id": "sidebar",
       "slot": "left",
       "title": "Analytics",
-      "tree": {}
+      "tree": {},
+      "icon": "BarChart3",
+      "refresh": "on_event:analytics.settings.saved",
+      "center_overlay": false,
+      "default_width": 240
     },
     {
       "panel_id": "workspace",
       "slot": "right",
       "title": "Analytics",
-      "tree": {}
+      "tree": {},
+      "icon": "BarChart3",
+      "refresh": "on_event:analytics.action.result",
+      "center_overlay": false,
+      "default_width": 380
     },
     {
       "panel_id": "analytics_hub",
       "slot": "center",
       "title": "Analytics Dashboard",
-      "tree": {}
+      "tree": {},
+      "icon": "icon.svg",
+      "refresh": "on_event:analytics.action.result",
+      "center_overlay": true
     }
   ],
   "category": "marketing"
