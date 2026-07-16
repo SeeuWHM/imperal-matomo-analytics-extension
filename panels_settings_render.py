@@ -8,22 +8,30 @@ from app import ext, matomo_ready, active_site_label
 
 
 def sites_list(s: dict) -> ui.UINode:
-    """Manage which Matomo site_ids are tracked as named projects."""
+    """Manage which Matomo site_ids are tracked as named projects.
+
+    Each site is a row with an inline trash action (asks to confirm) instead
+    of the old 'type the label and hit Remove' form."""
     sites = s.get("sites") or []
     active = active_site_label(s)
-    rows = [{"label": site.get("label", "-"), "site_id": str(site.get("site_id", "-")),
-             "scope": site.get("segment") or "whole site",
-             "default": "★ default" if site.get("label") == active else ""}
-            for site in sites]
-    table = ui.DataTable(
-        columns=[
-            ui.DataColumn(key="label", label="Site / project", width="30%"),
-            ui.DataColumn(key="site_id", label="Matomo site_id", width="15%"),
-            ui.DataColumn(key="scope", label="Scope", width="35%"),
-            ui.DataColumn(key="default", label="", width="20%"),
-        ],
-        rows=rows,
-    ) if rows else ui.Empty(message="No sites yet - add one below.")
+
+    def _row(site: dict) -> ui.UINode:
+        label = site.get("label", "-")
+        scope = site.get("segment") or "whole site"
+        return ui.ListItem(
+            id=label or "-",
+            title=label,
+            subtitle=f"site_id {site.get('site_id', '-')} · {scope}",
+            badge=ui.Badge(label="★ default", color="violet") if label == active else None,
+            actions=[{
+                "icon": "Trash2",
+                "on_click": ui.Call("remove_site", label=label),
+                "confirm": f"Remove “{label}” from tracked sites?",
+            }],
+        )
+
+    listing = (ui.List(items=[_row(site) for site in sites])
+               if sites else ui.Empty(message="No sites yet — add one below."))
 
     add_form = ui.Form(
         action="add_site",
@@ -45,19 +53,9 @@ def sites_list(s: dict) -> ui.UINode:
         ],
     ) if len(sites) > 1 else None
 
-    remove_form = ui.Form(
-        action="remove_site",
-        submit_label="Remove site",
-        children=[
-            ui.Input(placeholder="Label to remove", param_name="label"),
-        ],
-    ) if rows else None
-
-    children = [table, add_form]
+    children = [listing, add_form]
     if switch_form:
         children.append(switch_form)
-    if remove_form:
-        children.append(remove_form)
     return ui.Stack(children=children)
 
 
@@ -72,14 +70,6 @@ def settings_form(s: dict) -> ui.UINode:
         variant="primary" if not ready else "secondary",
         on_click=ui.Navigate(path=f"/ext/{ext.app_id}/secrets"),
     )
-    form = ui.Form(
-        action="save_settings",
-        submit_label="Save settings",
-        children=[
-            ui.Input(placeholder="UTM source Dimension ID (optional) - e.g. 8",
-                     value=str(s.get("utm_source_dim_id") or ""), param_name="utm_source_dim_id"),
-        ],
-    )
     return ui.Stack(children=[
         status,
         ui.Text(
@@ -91,8 +81,4 @@ def settings_form(s: dict) -> ui.UINode:
         ui.Divider(),
         ui.Text(content="Sites / projects", variant="caption"),
         sites_list(s),
-        ui.Divider(),
-        form,
-        ui.Text(content="Leave a field blank to keep the current value.",
-                variant="caption"),
     ])
