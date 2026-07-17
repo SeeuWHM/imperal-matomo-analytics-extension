@@ -24,8 +24,8 @@ def _err(data: dict) -> ActionResult:
     "traffic",
     description="Website visits summary: total visits, pageviews, unique visitors, bounce rate, "
                 "avg time on site, daily/weekly/monthly series. "
-                "Use for: покажи трафик, сколько посетителей, визиты за период, "
-                "pageviews, сводка по трафику, traffic overview, how many visitors.",
+                "Use for: traffic overview, how many visitors, visits for a period, "
+                "pageviews, traffic summary.",
     action_type="read",
     data_model=TrafficOverviewRecord,
 )
@@ -55,7 +55,7 @@ async def fn_traffic(ctx, params: TrafficParams) -> ActionResult:
 @chat.function(
     "top_pages",
     description="Most visited pages ranked by visits with bounce rate and avg time on page. "
-                "Use for: топ страниц, популярные страницы, какие страницы смотрят, "
+                "Use for: top pages, popular pages, "
                 "most popular content, best performing pages, top content.",
     action_type="read",
     event="analytics.action.result",
@@ -104,8 +104,8 @@ async def fn_top_pages(ctx, params: TopPagesParams) -> ActionResult:
 @chat.function(
     "trends",
     description="Week-over-week traffic comparison: this week vs last week, % change, direction. "
-                "Use for: трафик растёт или падает, сравни недели, WoW, "
-                "week over week, растёт ли сайт, динамика трафика, трафик вверх или вниз.",
+                "Use for: is traffic growing or declining, compare weeks, WoW, "
+                "week over week, traffic trend, traffic up or down.",
     action_type="read",
     event="analytics.action.result",
     data_model=TrendSummaryResponse,

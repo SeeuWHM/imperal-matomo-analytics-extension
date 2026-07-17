@@ -31,8 +31,7 @@ def _err(data: dict) -> ActionResult:
 
 @chat.function("real_time",
                description="Live active visitors right now: 30 min / 60 min / 3 hour windows. "
-                           "Use for: сколько людей сейчас на сайте, онлайн посетители, "
-                           "live visitors, real-time, кто сейчас.",
+                           "Use for: who's online right now, live visitors, real-time.",
                action_type="read", event="analytics.action.result", data_model=LiveVisitorsResponse)
 async def fn_real_time(ctx, params: _EmptyParams) -> ActionResult:
     """Handler: fn_real_time."""
@@ -66,9 +65,8 @@ async def fn_real_time(ctx, params: _EmptyParams) -> ActionResult:
 @chat.function("sources",
                description="Traffic sources breakdown: Direct Entry, Search Engines, Websites, "
                            "Social Networks, Campaigns. "
-                           "ALWAYS use for: откуда идёт трафик, откуда трафик на сайт, "
-                           "источники трафика, откуда приходят люди, топ источников, "
-                           "прямые переходы, реферальные ссылки, поисковый трафик, "
+                           "ALWAYS use for: where traffic comes from, top traffic sources, "
+                           "direct entries, referral links, search traffic, "
                            "direct vs organic, where does traffic come from, traffic sources.",
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_sources(ctx, params: _PeriodParams) -> ActionResult:
@@ -109,8 +107,7 @@ async def fn_sources(ctx, params: _PeriodParams) -> ActionResult:
 
 @chat.function("devices",
                description="Device type split: Desktop vs Smartphone vs Tablet percentages. "
-                           "Use for: с каких устройств, мобильные vs десктоп, "
-                           "mobile traffic share, сколько с телефона, desktop percentage.",
+                           "Use for: mobile vs desktop, mobile traffic share, desktop percentage.",
                action_type="read", data_model=BreakdownResponse)
 async def fn_devices(ctx, params: _PeriodParams) -> ActionResult:
     """Return device type breakdown."""
@@ -137,8 +134,8 @@ async def fn_devices(ctx, params: _PeriodParams) -> ActionResult:
 
 @chat.function("geo",
                description="Top countries by visitor count with percentages. "
-                           "Use for: из каких стран, топ страны, география трафика, "
-                           "откуда люди, США Индия Китай, country breakdown, where visitors come from.",
+                           "Use for: top countries, geography breakdown, "
+                           "country breakdown, where visitors come from.",
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_geo(ctx, params: _PeriodParams) -> ActionResult:
     """Handler: fn_geo."""
@@ -176,8 +173,8 @@ async def fn_geo(ctx, params: _PeriodParams) -> ActionResult:
 
 @chat.function("entry_exit",
                description="Top landing pages (where sessions start) + top exit pages (where visitors leave). "
-                           "Use for: где люди выходят, на каких страницах уходят, exit pages, "
-                           "точки входа, landing pages, корзина теряет людей, где теряем посетителей.",
+                           "Use for: exit pages, landing pages, where visitors drop off, "
+                           "where we're losing visitors.",
                action_type="read", data_model=EntryExitResponse)
 async def fn_entry_exit(ctx, params: _PeriodParams) -> ActionResult:
     """Return entry and exit page rankings."""

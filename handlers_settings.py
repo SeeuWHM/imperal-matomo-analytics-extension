@@ -42,8 +42,8 @@ async def fn_save_settings(ctx, params: SaveSettingsParams) -> ActionResult:
     "add_site",
     description="Add a site/project to track — either a whole Matomo site, or a specific "
                 "subdomain/section that shares a site_id with other content (via segment). "
-                "Use for: добавь сайт, новый проект, add another site, track a second project "
-                "separately, track just the blog/docs/forum subdomain, добавить ещё один сайт.",
+                "Use for: add another site, new project, track a second project "
+                "separately, track just the blog/docs/forum subdomain.",
     action_type="write",
     chain_callable=True,
     effects=["update:settings"],
@@ -114,7 +114,7 @@ async def fn_remove_site(ctx, params: RemoveSiteParams) -> ActionResult:
 @chat.function(
     "list_sites",
     description="List all sites/projects configured for this Matomo account. "
-                "Use for: какие сайты подключены, список проектов, list my sites.",
+                "Use for: list my sites, list my projects.",
     action_type="read",
     data_model=SitesListResponse,
 )
@@ -140,8 +140,8 @@ async def fn_list_sites(ctx, params: ListSitesParams) -> ActionResult:
 @chat.function(
     "set_active_site",
     description="Switch which site/project is the default - used by the sidebar, the dashboard "
-                "and chat questions where the user doesn't name a site. Use for: переключи на сайт X, "
-                "сделай сайт X основным, switch to site X, make X the default site/project.",
+                "and chat questions where the user doesn't name a site. "
+                "Use for: switch to site X, make X the default site/project.",
     action_type="write",
     chain_callable=True,
     effects=["update:settings"],
@@ -170,8 +170,8 @@ async def fn_set_active_site(ctx, params: SetActiveSiteParams) -> ActionResult:
                 "real main_url and every URL alias from Matomo's own SitesManager, not guessed "
                 "from referrer or page traffic. Also suggests a ready-to-use segment for each "
                 "domain, for tracking one subdomain (e.g. a blog) separately via add_site. "
-                "Use for: какие домены привязаны к сайту, какой домен у сайта, site domains, "
-                "site URLs, what domains does this site cover, как отследить отдельно поддомен.",
+                "Use for: site domains, site URLs, what domains does this site cover, "
+                "how to track a subdomain separately.",
     action_type="read",
     data_model=SiteInfoResponse,
 )
@@ -201,8 +201,7 @@ async def fn_site_domains(ctx, params: SiteDomainsParams) -> ActionResult:
                 "same project) - pass domain='All domains' to go back to the whole site. This "
                 "updates that project's own segment in place, it does NOT add a new site/project "
                 "(use add_site for that, to give a sub-project its own permanent label). "
-                "Use for: покажи только блог, switch to domain X, view just this subdomain, "
-                "смотреть только на этот домен, только для домена.",
+                "Use for: switch to domain X, view just this subdomain, view only this domain.",
     action_type="write",
     chain_callable=True,
     effects=["update:settings"],

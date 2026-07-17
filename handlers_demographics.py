@@ -132,8 +132,7 @@ async def fn_providers(ctx, params: AudienceParams) -> ActionResult:
 
 @chat.function("screen_resolutions",
                description="Screen resolution distribution: 1920x1080, 1366x768, mobile resolutions, etc. "
-                           "Use for: разрешения экранов, с каких экранов заходят, "
-                           "1080p vs 720p, мобильные разрешения, screen size breakdown.",
+                           "Use for: 1080p vs 720p, mobile resolutions, screen size breakdown.",
                action_type="read", event="analytics.action.result", data_model=BreakdownResponse)
 async def fn_screen_resolutions(ctx, params: AudienceParams) -> ActionResult:
     """Handler: fn_screen_resolutions."""

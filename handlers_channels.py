@@ -65,8 +65,8 @@ async def fn_device_brands(ctx, params: AudienceParams) -> ActionResult:
 @chat.function("browsers",
                description="Browser breakdown (Chrome, Firefox, Safari, Edge, Opera) AND OS breakdown "
                            "(Windows, macOS, Linux, Android, iOS). "
-                           "Use for: сравни браузеры, какие браузеры используют, Chrome vs Safari, "
-                           "browser compatibility, ОС пользователей, работает ли на всех браузерах.",
+                           "Use for: compare browsers, Chrome vs Safari, "
+                           "browser compatibility, users' OS, does it work on all browsers.",
                action_type="read", event="analytics.action.result", data_model=BrowsersResponse)
 async def fn_browsers(ctx, params: AudienceParams) -> ActionResult:
     """Handler: fn_browsers."""

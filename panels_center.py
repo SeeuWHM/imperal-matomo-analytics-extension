@@ -54,7 +54,7 @@ async def hub_panel(ctx, view: str = "", **_kw):
 
     # 6 parallel calls — insights removed to keep render under Temporal 30s timeout.
     # insights is expensive (5 sequential Matomo calls inside MOS) and not needed for
-    # the visual dashboard. Ask Webbee "что нужно сделать?" to get insights on demand.
+    # the visual dashboard. Ask Webbee "what should I fix?" to get insights on demand.
     # traffic_summary (period=month) gives bounce_rate + avg_time alongside the series.
     traffic_summary, traffic, trends, top, sources, devices, rt = await asyncio.gather(
         call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "month", "date": "today"}),

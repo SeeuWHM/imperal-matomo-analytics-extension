@@ -20,7 +20,7 @@ _DATE_HELP = (
     "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, "
     "thisWeek, lastWeek, thisMonth, lastMonth, thisYear. "
     "Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — "
-    "e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20."
+    "e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20."
 )
 
 _PERIOD_HELP = (

@@ -57,11 +57,11 @@ chat = ChatExtension(
         "which domains/URLs are configured for a site (site_domains). "
         "Sites are per-project - pass `site` (a label from list_sites) when the user names "
         "a specific site/project; omit it for their default site. "
-        "Keywords: трафик, посетители, визиты, страницы, аналитика сайта, "
-        "откуда трафик, откуда идёт трафик, откуда приходит трафик, источники трафика, "
-        "топ источников, прямые переходы, органический трафик Matomo, "
-        "браузеры, страны, устройства, разрешения, аномалии, инсайты, "
-        "домены сайта, привязанные домены, site domains."
+        "Keywords: traffic, visitors, visits, pages, site analytics, "
+        "where traffic comes from, traffic sources, "
+        "top sources, direct entries, organic Matomo traffic, "
+        "browsers, countries, devices, resolutions, anomalies, insights, "
+        "site domains, linked domains."
     ),
     max_rounds=5,
 )

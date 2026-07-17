@@ -24,8 +24,7 @@ from audience_helpers import err, table, top
                    "Which AI assistants and LLMs send traffic — ChatGPT, Perplexity, Claude, "
                    "Gemini, DeepSeek, Grok, Copilot. Combines referrer detection + UTM tracking. "
                    "Default period=month for meaningful data. "
-                   "Use for: с каких нейросетей трафик, ChatGPT traffic, AI referrers, "
-                   "нейронки шлют трафик, which AI sends visitors, LLM traffic."
+                   "Use for: ChatGPT traffic, AI referrers, which AI sends visitors, LLM traffic."
                ),
                action_type="read", event="analytics.action.result", data_model=AIReferrersResponse)
 async def fn_ai_referrers(ctx, params: AIReferrersParams) -> ActionResult:
@@ -67,8 +66,8 @@ async def fn_ai_referrers(ctx, params: AIReferrersParams) -> ActionResult:
 @chat.function("conversions",
                description=(
                    "Goal conversions from Matomo: purchases (cart complete), checkouts started, "
-                   "conversion rate. Use for: конверсии, покупки, заказы, сколько купили, "
-                   "checkout, воронка продаж, purchase funnel, how many orders."
+                   "conversion rate. Use for: conversions, purchases, orders, "
+                   "checkout, purchase funnel, how many orders."
                ),
                action_type="read", event="analytics.action.result", data_model=ConversionsResponse)
 async def fn_conversions(ctx, params: ConversionsParams) -> ActionResult:
@@ -124,7 +123,7 @@ async def fn_conversions(ctx, params: ConversionsParams) -> ActionResult:
 @chat.function("events",
                description=(
                    "Custom tracking events: engagement (scrolls, clicks) and ecommerce events "
-                   "(begin_checkout). Use for: события, события аналитики, engagement events, "
+                   "(begin_checkout). Use for: events, analytics events, engagement events, "
                    "scroll depth, ecommerce events, what is being tracked."
                ),
                action_type="read", event="analytics.action.result", data_model=EventsResponse)
@@ -170,7 +169,7 @@ async def fn_events(ctx, params: AudienceParams) -> ActionResult:
                description=(
                    "UTM source breakdown from custom dimensions — shows which sources "
                    "sent tagged traffic including AI sources with UTM parameters. "
-                   "Use for: utm источники, utm_source, tagged traffic, платный трафик, "
+                   "Use for: utm_source, tagged traffic, paid traffic, "
                    "ChatGPT referral with UTM, campaign sources."
                ),
                action_type="read", event="analytics.action.result", data_model=UTMSourcesResponse)
@@ -218,8 +217,8 @@ async def fn_utm_sources(ctx, params: AudienceParams) -> ActionResult:
 
 @chat.function("new_vs_returning",
                description="New visitors vs returning visitors ratio and counts. "
-                           "Use for: новые vs возвращающиеся, лояльность аудитории, "
-                           "сколько новых пользователей, retention, returning users percentage.",
+                           "Use for: new vs returning visitors, audience loyalty, "
+                           "retention, returning users percentage.",
                action_type="read", event="analytics.action.result", data_model=NewReturningResponse)
 async def fn_new_vs_returning(ctx, params: AudienceParams) -> ActionResult:
     """Handler: fn_new_vs_returning."""

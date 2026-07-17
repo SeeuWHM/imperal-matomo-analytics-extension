@@ -46,7 +46,7 @@
     },
     {
       "name": "traffic",
-      "description": "Website visits summary: total visits, pageviews, unique visitors, bounce rate, avg time on site, daily/weekly/monthly series. Use for: покажи трафик, сколько посетителей, визиты за период, pageviews, сводка по трафику, traffic overview, how many visitors.",
+      "description": "Website visits summary: total visits, pageviews, unique visitors, bounce rate, avg time on site, daily/weekly/monthly series. Use for: traffic overview, how many visitors, visits for a period, pageviews, traffic summary.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -68,7 +68,7 @@
           },
           "date": {
             "default": "last7",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -188,7 +188,7 @@
     },
     {
       "name": "top_pages",
-      "description": "Most visited pages ranked by visits with bounce rate and avg time on page. Use for: топ страниц, популярные страницы, какие страницы смотрят, most popular content, best performing pages, top content.",
+      "description": "Most visited pages ranked by visits with bounce rate and avg time on page. Use for: top pages, popular pages, most popular content, best performing pages, top content.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -210,7 +210,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -340,7 +340,7 @@
     },
     {
       "name": "trends",
-      "description": "Week-over-week traffic comparison: this week vs last week, % change, direction. Use for: трафик растёт или падает, сравни недели, WoW, week over week, растёт ли сайт, динамика трафика, трафик вверх или вниз.",
+      "description": "Week-over-week traffic comparison: this week vs last week, % change, direction. Use for: is traffic growing or declining, compare weeks, WoW, week over week, traffic trend, traffic up or down.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -453,7 +453,7 @@
     },
     {
       "name": "add_site",
-      "description": "Add a site/project to track — either a whole Matomo site, or a specific subdomain/section that shares a site_id with other content (via segment). Use for: добавь сайт, новый проект, add another site, track a second project separately, track just the blog/docs/forum subdomain, добавить ещё один сайт.",
+      "description": "Add a site/project to track — either a whole Matomo site, or a specific subdomain/section that shares a site_id with other content (via segment). Use for: add another site, new project, track a second project separately, track just the blog/docs/forum subdomain.",
       "action_type": "write",
       "chain_callable": true,
       "effects": [
@@ -638,7 +638,7 @@
     },
     {
       "name": "list_sites",
-      "description": "List all sites/projects configured for this Matomo account. Use for: какие сайты подключены, список проектов, list my sites.",
+      "description": "List all sites/projects configured for this Matomo account. Use for: list my sites, list my projects.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -712,7 +712,7 @@
     },
     {
       "name": "set_active_site",
-      "description": "Switch which site/project is the default - used by the sidebar, the dashboard and chat questions where the user doesn't name a site. Use for: переключи на сайт X, сделай сайт X основным, switch to site X, make X the default site/project.",
+      "description": "Switch which site/project is the default - used by the sidebar, the dashboard and chat questions where the user doesn't name a site. Use for: switch to site X, make X the default site/project.",
       "action_type": "write",
       "chain_callable": true,
       "effects": [
@@ -797,7 +797,7 @@
     },
     {
       "name": "site_domains",
-      "description": "Which domains/URLs are actually configured for a site/project in Matomo - the real main_url and every URL alias from Matomo's own SitesManager, not guessed from referrer or page traffic. Also suggests a ready-to-use segment for each domain, for tracking one subdomain (e.g. a blog) separately via add_site. Use for: какие домены привязаны к сайту, какой домен у сайта, site domains, site URLs, what domains does this site cover, как отследить отдельно поддомен.",
+      "description": "Which domains/URLs are actually configured for a site/project in Matomo - the real main_url and every URL alias from Matomo's own SitesManager, not guessed from referrer or page traffic. Also suggests a ready-to-use segment for each domain, for tracking one subdomain (e.g. a blog) separately via add_site. Use for: site domains, site URLs, what domains does this site cover, how to track a subdomain separately.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -906,7 +906,7 @@
     },
     {
       "name": "view_domain",
-      "description": "Scope the CURRENT site/project down to one domain, when its Matomo site_id covers several URL aliases (e.g. jump straight to a blog subdomain within the same project) - pass domain='All domains' to go back to the whole site. This updates that project's own segment in place, it does NOT add a new site/project (use add_site for that, to give a sub-project its own permanent label). Use for: покажи только блог, switch to domain X, view just this subdomain, смотреть только на этот домен, только для домена.",
+      "description": "Scope the CURRENT site/project down to one domain, when its Matomo site_id covers several URL aliases (e.g. jump straight to a blog subdomain within the same project) - pass domain='All domains' to go back to the whole site. This updates that project's own segment in place, it does NOT add a new site/project (use add_site for that, to give a sub-project its own permanent label). Use for: switch to domain X, view just this subdomain, view only this domain.",
       "action_type": "write",
       "chain_callable": true,
       "effects": [
@@ -999,7 +999,7 @@
     },
     {
       "name": "real_time",
-      "description": "Live active visitors right now: 30 min / 60 min / 3 hour windows. Use for: сколько людей сейчас на сайте, онлайн посетители, live visitors, real-time, кто сейчас.",
+      "description": "Live active visitors right now: 30 min / 60 min / 3 hour windows. Use for: who's online right now, live visitors, real-time.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -1092,7 +1092,7 @@
     },
     {
       "name": "sources",
-      "description": "Traffic sources breakdown: Direct Entry, Search Engines, Websites, Social Networks, Campaigns. ALWAYS use for: откуда идёт трафик, откуда трафик на сайт, источники трафика, откуда приходят люди, топ источников, прямые переходы, реферальные ссылки, поисковый трафик, direct vs organic, where does traffic come from, traffic sources.",
+      "description": "Traffic sources breakdown: Direct Entry, Search Engines, Websites, Social Networks, Campaigns. ALWAYS use for: where traffic comes from, top traffic sources, direct entries, referral links, search traffic, direct vs organic, where does traffic come from, traffic sources.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -1107,7 +1107,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -1188,7 +1188,7 @@
     },
     {
       "name": "devices",
-      "description": "Device type split: Desktop vs Smartphone vs Tablet percentages. Use for: с каких устройств, мобильные vs десктоп, mobile traffic share, сколько с телефона, desktop percentage.",
+      "description": "Device type split: Desktop vs Smartphone vs Tablet percentages. Use for: mobile vs desktop, mobile traffic share, desktop percentage.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -1203,7 +1203,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -1284,7 +1284,7 @@
     },
     {
       "name": "geo",
-      "description": "Top countries by visitor count with percentages. Use for: из каких стран, топ страны, география трафика, откуда люди, США Индия Китай, country breakdown, where visitors come from.",
+      "description": "Top countries by visitor count with percentages. Use for: top countries, geography breakdown, country breakdown, where visitors come from.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -1299,7 +1299,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -1380,7 +1380,7 @@
     },
     {
       "name": "entry_exit",
-      "description": "Top landing pages (where sessions start) + top exit pages (where visitors leave). Use for: где люди выходят, на каких страницах уходят, exit pages, точки входа, landing pages, корзина теряет людей, где теряем посетителей.",
+      "description": "Top landing pages (where sessions start) + top exit pages (where visitors leave). Use for: exit pages, landing pages, where visitors drop off, where we're losing visitors.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -1395,7 +1395,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -1532,7 +1532,7 @@
     },
     {
       "name": "insights",
-      "description": "Actionable insights: traffic drops, high bounce hotspots, growing/dying pages. Free, no AI tokens. Use for: что нужно исправить, аномалии, проблемы с сайтом, что плохо работает, что делать, где теряем трафик, recommendations.",
+      "description": "Actionable insights: traffic drops, high bounce hotspots, growing/dying pages. Free, no AI tokens. Use for: what needs fixing, anomalies, site problems, what's not working, what to do, where we're losing traffic, recommendations.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -1725,7 +1725,7 @@
     },
     {
       "name": "ai_referrers",
-      "description": "Which AI assistants and LLMs send traffic — ChatGPT, Perplexity, Claude, Gemini, DeepSeek, Grok, Copilot. Combines referrer detection + UTM tracking. Default period=month for meaningful data. Use for: с каких нейросетей трафик, ChatGPT traffic, AI referrers, нейронки шлют трафик, which AI sends visitors, LLM traffic.",
+      "description": "Which AI assistants and LLMs send traffic — ChatGPT, Perplexity, Claude, Gemini, DeepSeek, Grok, Copilot. Combines referrer detection + UTM tracking. Default period=month for meaningful data. Use for: ChatGPT traffic, AI referrers, which AI sends visitors, LLM traffic.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -1740,7 +1740,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -1803,7 +1803,7 @@
     },
     {
       "name": "conversions",
-      "description": "Goal conversions from Matomo: purchases (cart complete), checkouts started, conversion rate. Use for: конверсии, покупки, заказы, сколько купили, checkout, воронка продаж, purchase funnel, how many orders.",
+      "description": "Goal conversions from Matomo: purchases (cart complete), checkouts started, conversion rate. Use for: conversions, purchases, orders, checkout, purchase funnel, how many orders.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -1818,7 +1818,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -1917,7 +1917,7 @@
     },
     {
       "name": "events",
-      "description": "Custom tracking events: engagement (scrolls, clicks) and ecommerce events (begin_checkout). Use for: события, события аналитики, engagement events, scroll depth, ecommerce events, what is being tracked.",
+      "description": "Custom tracking events: engagement (scrolls, clicks) and ecommerce events (begin_checkout). Use for: events, analytics events, engagement events, scroll depth, ecommerce events, what is being tracked.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -1932,7 +1932,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2020,7 +2020,7 @@
     },
     {
       "name": "utm_sources",
-      "description": "UTM source breakdown from custom dimensions — shows which sources sent tagged traffic including AI sources with UTM parameters. Use for: utm источники, utm_source, tagged traffic, платный трафик, ChatGPT referral with UTM, campaign sources.",
+      "description": "UTM source breakdown from custom dimensions — shows which sources sent tagged traffic including AI sources with UTM parameters. Use for: utm_source, tagged traffic, paid traffic, ChatGPT referral with UTM, campaign sources.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -2035,7 +2035,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2117,7 +2117,7 @@
     },
     {
       "name": "new_vs_returning",
-      "description": "New visitors vs returning visitors ratio and counts. Use for: новые vs возвращающиеся, лояльность аудитории, сколько новых пользователей, retention, returning users percentage.",
+      "description": "New visitors vs returning visitors ratio and counts. Use for: new vs returning visitors, audience loyalty, retention, returning users percentage.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -2132,7 +2132,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2202,7 +2202,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2282,7 +2282,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2362,7 +2362,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2427,7 +2427,7 @@
     },
     {
       "name": "browsers",
-      "description": "Browser breakdown (Chrome, Firefox, Safari, Edge, Opera) AND OS breakdown (Windows, macOS, Linux, Android, iOS). Use for: сравни браузеры, какие браузеры используют, Chrome vs Safari, browser compatibility, ОС пользователей, работает ли на всех браузерах.",
+      "description": "Browser breakdown (Chrome, Firefox, Safari, Edge, Opera) AND OS breakdown (Windows, macOS, Linux, Android, iOS). Use for: compare browsers, Chrome vs Safari, browser compatibility, users' OS, does it work on all browsers.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -2442,7 +2442,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2529,7 +2529,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2609,7 +2609,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2689,7 +2689,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2769,7 +2769,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2849,7 +2849,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -2929,7 +2929,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -3016,7 +3016,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -3096,7 +3096,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -3161,7 +3161,7 @@
     },
     {
       "name": "screen_resolutions",
-      "description": "Screen resolution distribution: 1920x1080, 1366x768, mobile resolutions, etc. Use for: разрешения экранов, с каких экранов заходят, 1080p vs 720p, мобильные разрешения, screen size breakdown.",
+      "description": "Screen resolution distribution: 1920x1080, 1366x768, mobile resolutions, etc. Use for: 1080p vs 720p, mobile resolutions, screen size breakdown.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -3176,7 +3176,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -3256,7 +3256,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -3336,7 +3336,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },
@@ -3416,7 +3416,7 @@
           },
           "date": {
             "default": "today",
-            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'с 10 апреля по 20 апреля' → period=range, date=2026-04-10,2026-04-20.",
+            "description": "Matomo date string. Presets: today, yesterday, last7, last14, last30, last90, thisWeek, lastWeek, thisMonth, lastMonth, thisYear. Custom range: use period='range' and date='YYYY-MM-DD,YYYY-MM-DD' — e.g. 'from April 10 to April 20' → period=range, date=2026-04-10,2026-04-20.",
             "title": "Date",
             "type": "string"
           },

@@ -42,8 +42,8 @@ def _insights_ui(data: dict):
 @chat.function("insights",
                description="Actionable insights: traffic drops, high bounce hotspots, growing/dying pages. "
                            "Free, no AI tokens. "
-                           "Use for: что нужно исправить, аномалии, проблемы с сайтом, "
-                           "что плохо работает, что делать, где теряем трафик, recommendations.",
+                           "Use for: what needs fixing, anomalies, site problems, "
+                           "what's not working, what to do, where we're losing traffic, recommendations.",
                action_type="read",
                event="analytics.action.result",
                data_model=InsightsResponse)
