@@ -1,6 +1,7 @@
 # Matomo Analytics Connector — Full Documentation
 
-**Version:** 5.2.3 | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
+**Version:** 5.2.7 (code HEAD; SDK bumped to 5.9.9 + all tool descriptions stripped to English-only
+2026-07-18 — see bottom of file) | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
 **Git:** `github.com/SeeuWHM/imperal-matomo-analytics-extension` (branch `main`, latest commit `4923175`)
 **Live deploy status (as of writing):** `draft` — `reject_reason` on file is a **stale** message
 ("Does not meet quality standards") left over from an earlier, already-fixed review pass
@@ -485,3 +486,30 @@ Edit them directly in `imperal.json` if you rename/re-describe the app.
 - A previously different, now-superseded token was committed in plaintext to an old test file and
   removed earlier in this project's history; that token should be considered compromised/rotated
   if it hasn't been already (unrelated to the token above).
+
+---
+
+## 2026-07-18 — SDK bump + English-only tool descriptions
+
+- **SDK bumped 5.9.3 → 5.9.9.** `pyproject.toml` pin updated to `imperal-sdk>=5.9.9`. `imperal build`/
+  `imperal validate` re-run clean (0 errors/warnings) — no behavior change from the bump itself.
+- **Fixed a real packaging gap found during the bump:** `compare_render.py` (imported by
+  `handlers_traffic.py`/`handlers_detail.py`) was missing from `tool.setuptools.py-modules` in
+  `pyproject.toml` — a sdist/wheel build would have shipped without it. Added.
+- **All `@chat.function`/`Extension`/`ChatExtension` descriptions are now English-only** — the
+  bilingual `"Use for: русская фраза, english phrase"` trigger lists across `handlers_*.py` and
+  `app.py`'s tool description had the Russian phrases stripped, English kept, punctuation cleaned up.
+  Same for a Russian date-range example in `params.py`'s `_DATE_HELP` string (translated to English).
+  This is a workspace-wide policy change (all 9 SeeU extensions), not Matomo-specific — Webbee
+  already understands non-English chat input semantically without the literal phrase baked into a
+  tool's description.
+  - **Deliberately left untouched:** `tests/test_webbee_agent.py`'s Russian NLU test phrases (they
+    verify the system recognizes Russian input — not marketplace/Webbee-facing description text) and
+    `app.py`'s legacy-migration default site label, which was translated separately (`"Основной
+    сайт"` → `"Main site"`, with the matching `tests/test_handlers.py` assertion updated in lockstep).
+- `ctx.notify.push(title=..., body=...)` in `main.py`'s daily-scan job **does not exist on the
+  current SDK** (`NotifyClient` only has `__call__(message, **kwargs)` and `.send(message, channel=,
+  **kwargs)` — no `.push` method). This call is wrapped in a bare `try/except: pass`, so it fails
+  silently rather than crashing — but the daily "critical/warnings" morning notification is
+  currently a silent no-op. Found while auditing `ctx.notify` usage across the workspace; not fixed
+  here (out of scope for the SDK-bump pass) — flagged for a follow-up.

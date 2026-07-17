@@ -1,6 +1,6 @@
 # Matomo Analytics Connector
 
-[![Imperal SDK](https://img.shields.io/badge/imperal--sdk-5.9.3-blue)](https://pypi.org/project/imperal-sdk/)
+[![Imperal SDK](https://img.shields.io/badge/imperal--sdk-5.9.9-blue)](https://pypi.org/project/imperal-sdk/)
 [![Version](https://img.shields.io/badge/version-5.2.7-green)](https://github.com/SeeuWHM/imperal-matomo-analytics-extension/releases)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-orange)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Imperal%20Cloud-purple)](https://panel.imperal.io)
@@ -167,5 +167,5 @@ All files kept ≤300 lines to satisfy the deploy validator.
 
 ## Built with
 
-- [imperal-sdk](https://github.com/imperalcloud/imperal-sdk) 5.9
+- [imperal-sdk](https://github.com/imperalcloud/imperal-sdk) 5.9.9
 - [Imperal Cloud](https://panel.imperal.io)
