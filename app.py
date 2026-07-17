@@ -138,7 +138,7 @@ async def load_settings(ctx) -> dict:
     # One-time migration: pre-multisite installs stored a single
     # matomo_site_id - fold it into `sites` as the default entry.
     if not settings["sites"] and stored.get("matomo_site_id"):
-        settings["sites"] = [{"label": "Основной сайт", "site_id": int(stored["matomo_site_id"])}]
+        settings["sites"] = [{"label": "Main site", "site_id": int(stored["matomo_site_id"])}]
 
     settings["matomo_url"] = await ctx.secrets.get("matomo_url") or ""
     settings["matomo_token"] = await ctx.secrets.get("matomo_token") or ""

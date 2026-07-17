@@ -80,7 +80,7 @@ async def test_load_settings_migrates_legacy_single_site_id():
     should fold it into `sites` as the default entry when `sites` is empty."""
     ctx = _ctx(store={"matomo_site_id": 5})
     s = await app_module.load_settings(ctx)
-    assert s["sites"] == [{"label": "Основной сайт", "site_id": 5}]
+    assert s["sites"] == [{"label": "Main site", "site_id": 5}]
 
 
 def test_resolve_site_id_by_label():
