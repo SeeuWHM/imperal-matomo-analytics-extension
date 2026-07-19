@@ -1,6 +1,6 @@
 {
   "manifest_schema_version": 3,
-  "sdk_version": "5.9.9",
+  "sdk_version": "5.9.12",
   "app_id": "imperal-matomo-analytics-extension",
   "version": "5.2.7",
   "name": "Matomo Analytics Connector",
