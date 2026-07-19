@@ -7,10 +7,22 @@ check any auth header, so none is sent.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+
 from app import SERVER_URL, load_settings, matomo_ready, resolve_site, active_site_label
+from response_models import CachedAnalyticsPayload
 
 TIMEOUT = 30
 HEAVY_TIMEOUT = 90  # full-report, daily-report: backend runs ~24 parallel Matomo calls
+
+# ctx.cache TTL is platform-capped to [5, 300]s (I-CACHE-TTL-CAP-300S). Real-time
+# visitor counts get a short TTL so "live" still feels live; everything else
+# (traffic/trends/top-pages/sources/devices/geo/entry-exit) barely moves
+# minute-to-minute, so a longer TTL turns repeat panel opens from ~6-8 live
+# HTTP round-trips into a single cache read.
+REALTIME_CACHE_TTL = 30
+DASHBOARD_CACHE_TTL = 180
 
 
 def _normalize_backend_url(raw: str) -> str:
@@ -20,6 +32,65 @@ def _normalize_backend_url(raw: str) -> str:
     if not value.startswith(("http://", "https://")):
         value = f"https://{value}"
     return value.rstrip("/")
+
+
+def _cache_key(ctx_site_label: str, site_id: int, segment: str | None,
+               endpoint: str, extra: dict | None) -> str:
+    """Deterministic, key-safe ctx.cache key for one call_mos() shape.
+
+    Includes site_id + segment (not just the label) so a stale/renamed label
+    can never collide with a different project, and every distinct
+    period/date/limit combination gets its own slot. Hashed to stay within
+    ctx.cache's 128-char key-safety cap regardless of how long the label or
+    extra params get.
+    """
+    parts = {
+        "ep": endpoint,
+        "site_id": site_id,
+        "segment": segment or "",
+        "extra": extra or {},
+    }
+    digest = hashlib.sha256(json.dumps(parts, sort_keys=True, default=str).encode()).hexdigest()[:32]
+    return f"mos:{digest}"
+
+
+async def call_mos_cached(ctx, endpoint: str, extra: dict | None = None, timeout: int = TIMEOUT,
+                           site: str = "", ttl_seconds: int = DASHBOARD_CACHE_TTL) -> dict:
+    """Cached wrapper over call_mos() for dashboard/panel reads.
+
+    Only for single-target, read-only calls (the panels' KPI/chart/table
+    fan-outs) — never for site_info_for/add_site's live lookups or any
+    write path. On any error response, the error is NOT cached (so a
+    transient Matomo hiccup doesn't stick around for the full TTL) — only
+    a genuinely good payload gets written back.
+    """
+    s = await load_settings(ctx)
+    if not matomo_ready(s):
+        return {"error": "Matomo not configured - open Settings and add your URL + Auth Token.",
+                "_config": True}
+
+    cfg = resolve_site(s, site)
+    key = _cache_key(site, int(cfg.get("site_id", 1)), cfg.get("segment"), endpoint, extra)
+
+    async def _fetch() -> CachedAnalyticsPayload:
+        data = await call_mos(ctx, endpoint, extra, timeout=timeout, site=site)
+        return CachedAnalyticsPayload(data=data if isinstance(data, dict) else {"error": "bad_response"})
+
+    if not hasattr(ctx, "cache") or ctx.cache is None:
+        # MockContext/tests without a cache client — behave like call_mos().
+        return await call_mos(ctx, endpoint, extra, timeout=timeout, site=site)
+
+    cached = await ctx.cache.get(key, CachedAnalyticsPayload)
+    if cached is not None and "error" not in cached.data:
+        return cached.data
+
+    payload = await _fetch()
+    if "error" not in payload.data:
+        try:
+            await ctx.cache.set(key, payload, ttl_seconds=ttl_seconds)
+        except Exception:
+            pass  # cache write is an optimization, never the correctness path
+    return payload.data
 
 
 def _target(s: dict, label: str) -> dict:

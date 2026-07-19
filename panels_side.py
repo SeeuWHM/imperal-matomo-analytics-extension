@@ -17,7 +17,7 @@ import asyncio
 from imperal_sdk import ui
 
 from app import ext, load_settings, load_result, matomo_ready, active_site_label
-from api_client import call_mos, ensure_known_domains
+from api_client import call_mos_cached, ensure_known_domains, REALTIME_CACHE_TTL
 from panels_render import (
     kpi_stats, chart, insights_cards, pages_table,
     breakdown_table, entry_exit_table, result_zone,
@@ -92,8 +92,8 @@ async def sidebar_panel(ctx):
         ])
 
     traffic, rt, s = await asyncio.gather(
-        call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}),
-        call_mos(ctx, "/api/matomo-analytics/real-time", {}),
+        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}),
+        call_mos_cached(ctx, "/api/matomo-analytics/real-time", {}, ttl_seconds=REALTIME_CACHE_TTL),
         ensure_known_domains(ctx, s),
         return_exceptions=True,
     )
@@ -139,14 +139,14 @@ async def _gather(ctx) -> dict:
     keys = ("traffic", "trends", "top", "sources", "devices", "geo",
             "real_time", "entry_exit")
     calls = [
-        call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}),
-        call_mos(ctx, "/api/matomo-analytics/trends", {}),
-        call_mos(ctx, "/api/matomo-analytics/top-pages", {"period": "week", "date": "today", "limit": 10}),
-        call_mos(ctx, "/api/matomo-analytics/sources", {"period": "week", "date": "today"}),
-        call_mos(ctx, "/api/matomo-analytics/devices", {"period": "week", "date": "today"}),
-        call_mos(ctx, "/api/matomo-analytics/geo", {"period": "week", "date": "today", "limit": 10}),
-        call_mos(ctx, "/api/matomo-analytics/real-time", {}),
-        call_mos(ctx, "/api/matomo-analytics/entry-exit", {"period": "week", "date": "today", "limit": 8}),
+        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}),
+        call_mos_cached(ctx, "/api/matomo-analytics/trends", {}),
+        call_mos_cached(ctx, "/api/matomo-analytics/top-pages", {"period": "week", "date": "today", "limit": 10}),
+        call_mos_cached(ctx, "/api/matomo-analytics/sources", {"period": "week", "date": "today"}),
+        call_mos_cached(ctx, "/api/matomo-analytics/devices", {"period": "week", "date": "today"}),
+        call_mos_cached(ctx, "/api/matomo-analytics/geo", {"period": "week", "date": "today", "limit": 10}),
+        call_mos_cached(ctx, "/api/matomo-analytics/real-time", {}, ttl_seconds=REALTIME_CACHE_TTL),
+        call_mos_cached(ctx, "/api/matomo-analytics/entry-exit", {"period": "week", "date": "today", "limit": 8}),
     ]
     results = await asyncio.gather(*calls, return_exceptions=True)
     return {k: (r if not isinstance(r, Exception) else {"error": str(r)})

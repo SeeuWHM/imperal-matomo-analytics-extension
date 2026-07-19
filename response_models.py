@@ -8,6 +8,17 @@ class AnalyticsScalarResponse(BaseModel):
     data: dict[str, Any] = Field(default_factory=dict)
 
 
+class CachedAnalyticsPayload(BaseModel):
+    """Generic ctx.cache envelope for one call_mos() JSON response.
+
+    Panels render several independent backend calls per open (traffic,
+    trends, top-pages, sources, devices, geo, real-time, entry-exit) - this
+    single model lets call_mos_cached() cache any of them under ctx.cache's
+    Pydantic-only constraint without declaring one model per endpoint.
+    """
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
 class TrafficOverviewRecord(BaseModel):
     visits: int = 0
     pageviews: int = 0

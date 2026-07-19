@@ -6,7 +6,7 @@ import asyncio
 from imperal_sdk import ui
 
 from app import ext, load_settings, matomo_ready, active_site_label
-from api_client import call_mos, ensure_known_domains
+from api_client import call_mos_cached, ensure_known_domains, REALTIME_CACHE_TTL
 from panels_render import kpi_stats, chart, pages_table, breakdown_table
 from panels_settings_render import settings_form
 # NOTE: this import is load-bearing. The platform can load this center-panel
@@ -57,13 +57,13 @@ async def hub_panel(ctx, view: str = "", **_kw):
     # the visual dashboard. Ask Webbee "what should I fix?" to get insights on demand.
     # traffic_summary (period=month) gives bounce_rate + avg_time alongside the series.
     traffic_summary, traffic, trends, top, sources, devices, rt = await asyncio.gather(
-        call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "month", "date": "today"}),
-        call_mos(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last30"}),
-        call_mos(ctx, "/api/matomo-analytics/trends", {}),
-        call_mos(ctx, "/api/matomo-analytics/top-pages", {"period": "month", "date": "today", "limit": 10}),
-        call_mos(ctx, "/api/matomo-analytics/sources", {"period": "month", "date": "today"}),
-        call_mos(ctx, "/api/matomo-analytics/devices", {"period": "month", "date": "today"}),
-        call_mos(ctx, "/api/matomo-analytics/real-time", {}),
+        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "month", "date": "today"}),
+        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last30"}),
+        call_mos_cached(ctx, "/api/matomo-analytics/trends", {}),
+        call_mos_cached(ctx, "/api/matomo-analytics/top-pages", {"period": "month", "date": "today", "limit": 10}),
+        call_mos_cached(ctx, "/api/matomo-analytics/sources", {"period": "month", "date": "today"}),
+        call_mos_cached(ctx, "/api/matomo-analytics/devices", {"period": "month", "date": "today"}),
+        call_mos_cached(ctx, "/api/matomo-analytics/real-time", {}, ttl_seconds=REALTIME_CACHE_TTL),
         return_exceptions=True,
     )
 

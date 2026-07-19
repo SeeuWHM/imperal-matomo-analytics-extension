@@ -714,6 +714,101 @@ async def test_ensure_known_domains_noop_on_lookup_failure(monkeypatch):
     assert "known_domains" not in updated["sites"][0]
 
 
+
+# ─── call_mos_cached — ctx.cache wrapper backing the dashboard panels ────────
+
+class _FakeCacheClient:
+    """Minimal stand-in for imperal_sdk's CacheClient.get_or_fetch() contract:
+    cache miss -> call fetcher, store result; cache hit -> never call fetcher.
+    """
+    def __init__(self):
+        self.store: dict[str, object] = {}
+        self.fetch_calls = 0
+
+    async def get_or_fetch(self, key, model, fetcher, ttl_seconds=60):
+        if key in self.store:
+            return self.store[key]
+        self.fetch_calls += 1
+        value = await fetcher()
+        self.store[key] = value
+        return value
+
+    async def get(self, key, model):
+        return self.store.get(key)
+
+    async def set(self, key, value, ttl_seconds=60):
+        self.store[key] = value
+
+    async def delete(self, key):
+        self.store.pop(key, None)
+
+
+@pytest.mark.asyncio
+async def test_call_mos_cached_reports_missing_matomo_without_touching_cache():
+    ctx = _ctx(secrets={})
+    ctx._cache = _FakeCacheClient()
+    data = await api_client.call_mos_cached(ctx, "/api/matomo-analytics/traffic", {})
+    assert data["_config"] is True
+    assert ctx.cache.fetch_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_call_mos_cached_hits_backend_once_then_serves_from_cache(monkeypatch):
+    calls = []
+
+    async def fake_call(ctx, endpoint, extra=None, timeout=30, site="", sites=None):
+        calls.append(endpoint)
+        return {"visits": 42}
+
+    monkeypatch.setattr(api_client, "call_mos", fake_call)
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}]})
+    ctx._cache = _FakeCacheClient()
+
+    first = await api_client.call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day"})
+    second = await api_client.call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day"})
+
+    assert first == {"visits": 42}
+    assert second == {"visits": 42}
+    assert len(calls) == 1  # second call served from cache, no re-fetch
+
+
+@pytest.mark.asyncio
+async def test_call_mos_cached_keys_differ_per_site(monkeypatch):
+    seen_sites = []
+
+    async def fake_call(ctx, endpoint, extra=None, timeout=30, site="", sites=None):
+        seen_sites.append(site)
+        return {"visits": len(seen_sites)}
+
+    monkeypatch.setattr(api_client, "call_mos", fake_call)
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}, {"label": "Blog", "site_id": 2}]})
+    ctx._cache = _FakeCacheClient()
+
+    a = await api_client.call_mos_cached(ctx, "/api/matomo-analytics/traffic", {}, site="Main")
+    b = await api_client.call_mos_cached(ctx, "/api/matomo-analytics/traffic", {}, site="Blog")
+
+    assert a != b  # distinct site_id -> distinct cache key -> both fetched
+    assert len(seen_sites) == 2
+
+
+@pytest.mark.asyncio
+async def test_call_mos_cached_keys_differ_per_extra_params(monkeypatch):
+    calls = []
+
+    async def fake_call(ctx, endpoint, extra=None, timeout=30, site="", sites=None):
+        calls.append(extra)
+        return {"data": extra}
+
+    monkeypatch.setattr(api_client, "call_mos", fake_call)
+    ctx = _ctx(store={"sites": [{"label": "Main", "site_id": 1}]})
+    ctx._cache = _FakeCacheClient()
+
+    await api_client.call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day"})
+    await api_client.call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "week"})
+
+    assert len(calls) == 2  # different extra params -> different cache keys
+
+
 @pytest.mark.asyncio
 async def test_ensure_known_domains_never_raises_even_on_unexpected_exception(monkeypatch):
     """A panel render must never break because of this best-effort lookup -

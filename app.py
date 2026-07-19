@@ -26,7 +26,7 @@ SERVER_URL = os.environ.get("MATOMO_BACKEND_URL", "") or "https://api.webhostmos
 
 ext = Extension(
     "imperal-matomo-analytics-extension",
-    version="5.2.7",
+    version="5.3.0",
     display_name="Matomo Analytics Connector",
     description="Traffic analytics dashboard: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection from your Matomo instance. Track multiple sites/projects under one Matomo account.",
     icon="icon.svg",
@@ -87,6 +87,13 @@ ext.secret(
     write_mode="user",
     max_bytes=200,
 )(lambda: None)
+
+# ctx.cache — short-lived (5-300s, platform-capped) per-user cache so opening
+# the dashboard panels doesn't re-fan-out 6-8 live Matomo calls every single
+# render. Registered here (not in api_client.py) to avoid an app<->api_client
+# import cycle — api_client already imports from app.
+from response_models import CachedAnalyticsPayload  # noqa: E402
+ext.cache_model("analytics_payload")(CachedAnalyticsPayload)
 
 SETTINGS_COLLECTION = "analytics_settings"
 RESULT_COLLECTION = "analytics_result"
