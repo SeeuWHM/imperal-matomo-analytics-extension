@@ -17,8 +17,9 @@ def kpi_stats(d: dict) -> ui.UINode:
     trends = d.get("trends") or {}
     rt = (d.get("real_time") or {}).get("live_30m") or {}
     series = traffic.get("series") or []
-    today = series[-1]["visits"] if series else 0
-    yesterday = series[-2]["visits"] if len(series) >= 2 else 0
+    today = series[-1].get("visits", 0) if series else 0
+    today_uniq = series[-1].get("unique_visitors") if series else None
+    yesterday = series[-2].get("visits", 0) if len(series) >= 2 else 0
     week = sum(s.get("visits", 0) for s in series)
     change = trends.get("change_percent", 0)
     direction = trends.get("direction", "flat")
@@ -26,9 +27,11 @@ def kpi_stats(d: dict) -> ui.UINode:
     return ui.Stats(children=[
         ui.Stat(label="Live (30 min)", value=str(rt.get("visitors", 0)),
                 color="violet", icon="Users"),
-        ui.Stat(label="Today", value=f"{today:,}", color="blue"),
+        ui.Stat(label="Today — Visits", value=f"{today:,}", color="blue"),
+        *([ui.Stat(label="Today — Unique visitors", value=f"{today_uniq:,}", color="teal")]
+          if today_uniq is not None else []),
         ui.Stat(label="Yesterday", value=f"{yesterday:,}", color="gray"),
-        ui.Stat(label="Last 7d", value=f"{week:,}", color="blue"),
+        ui.Stat(label="Last 7d (visits)", value=f"{week:,}", color="blue"),
         ui.Stat(label="WoW Δ", value=f"{change:+.1f}%",
                 color="green" if direction == "up"
                 else "red" if direction == "down" else "gray"),
@@ -61,13 +64,13 @@ def insights_cards(insights: dict) -> ui.UINode:
     ])
 
 
-def pages_table(pages: list) -> ui.UINode:
+def pages_table(pages: list, views_label: str = "Pageviews") -> ui.UINode:
     if not pages:
         return ui.Empty(message="No data")
     return ui.DataTable(
         columns=[
             ui.DataColumn(key="url", label="Page", width="60%"),
-            ui.DataColumn(key="views", label="Visits", width="20%"),
+            ui.DataColumn(key="views", label=views_label, width="20%"),
             ui.DataColumn(key="bounce_rate", label="Bounce", width="20%"),
         ],
         rows=[{"url": (p.get("url") or "/")[:70],

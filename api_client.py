@@ -55,7 +55,8 @@ def _cache_key(ctx_site_label: str, site_id: int, segment: str | None,
 
 
 async def call_mos_cached(ctx, endpoint: str, extra: dict | None = None, timeout: int = TIMEOUT,
-                           site: str = "", ttl_seconds: int = DASHBOARD_CACHE_TTL) -> dict:
+                           site: str = "", ttl_seconds: int = DASHBOARD_CACHE_TTL,
+                           bypass_cache: bool = False) -> dict:
     """Cached wrapper over call_mos() for dashboard/panel reads.
 
     Only for single-target, read-only calls (the panels' KPI/chart/table
@@ -63,6 +64,11 @@ async def call_mos_cached(ctx, endpoint: str, extra: dict | None = None, timeout
     write path. On any error response, the error is NOT cached (so a
     transient Matomo hiccup doesn't stick around for the full TTL) — only
     a genuinely good payload gets written back.
+
+    `bypass_cache=True` (the dashboard's "Refresh now" button) skips the
+    cached-read short-circuit and always hits Matomo fresh, still
+    refreshing the cache entry afterwards so the next normal open is fast
+    again.
     """
     s = await load_settings(ctx)
     if not matomo_ready(s):
@@ -80,9 +86,10 @@ async def call_mos_cached(ctx, endpoint: str, extra: dict | None = None, timeout
         # MockContext/tests without a cache client — behave like call_mos().
         return await call_mos(ctx, endpoint, extra, timeout=timeout, site=site)
 
-    cached = await ctx.cache.get(key, CachedAnalyticsPayload)
-    if cached is not None and "error" not in cached.data:
-        return cached.data
+    if not bypass_cache:
+        cached = await ctx.cache.get(key, CachedAnalyticsPayload)
+        if cached is not None and "error" not in cached.data:
+            return cached.data
 
     payload = await _fetch()
     if "error" not in payload.data:

@@ -92,7 +92,7 @@ async def sidebar_panel(ctx):
         ])
 
     traffic, rt, s = await asyncio.gather(
-        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}),
+        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last30"}),
         call_mos_cached(ctx, "/api/matomo-analytics/real-time", {}, ttl_seconds=REALTIME_CACHE_TTL),
         ensure_known_domains(ctx, s),
         return_exceptions=True,
@@ -101,6 +101,7 @@ async def sidebar_panel(ctx):
         s = await load_settings(ctx)
     series = (traffic.get("series") or []) if not isinstance(traffic, Exception) else []
     today = series[-1].get("visits", 0) if series else 0
+    today_uniq = series[-1].get("unique_visitors") if series else None
     yesterday = series[-2].get("visits", 0) if len(series) >= 2 else 0
     live = (rt.get("live_30m") or {}).get("visitors", 0) if not isinstance(rt, Exception) else 0
 
@@ -117,7 +118,9 @@ async def sidebar_panel(ctx):
         ui.Divider(),
         ui.Stats(children=[
             ui.Stat(label="Live", value=str(live), color="violet", icon="Users"),
-            ui.Stat(label="Today", value=f"{today:,}", color="blue"),
+            ui.Stat(label="Today (visits)", value=f"{today:,}", color="blue"),
+            *([ui.Stat(label="Today (unique)", value=f"{today_uniq:,}", color="teal")]
+              if today_uniq is not None else []),
             ui.Stat(label="Yesterday", value=f"{yesterday:,}", color="gray"),
         ]),
         ui.Divider(),
@@ -133,20 +136,33 @@ async def sidebar_panel(ctx):
 
 # ─────────────────────── Right workspace ─────────────────
 
-async def _gather(ctx) -> dict:
+async def _gather(ctx, bypass_cache: bool = False) -> dict:
     """Fan out dashboard queries in parallel. insights excluded — 5 sequential
-    Matomo calls inside MOS push render time past Temporal's 30s timeout."""
+    Matomo calls inside MOS push render time past Temporal's 30s timeout.
+
+    Every section below uses the SAME "last 30 days" window as the center
+    dashboard (period=day/date=last30) — this used to be period=week/date=today
+    ("week to date", an undisclosed, ever-changing 1-7 day window) which made
+    this panel's numbers silently disagree with the center dashboard's "last
+    30d" label. One shared window, stated honestly in every section title."""
     keys = ("traffic", "trends", "top", "sources", "devices", "geo",
             "real_time", "entry_exit")
     calls = [
-        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last7"}),
-        call_mos_cached(ctx, "/api/matomo-analytics/trends", {}),
-        call_mos_cached(ctx, "/api/matomo-analytics/top-pages", {"period": "week", "date": "today", "limit": 10}),
-        call_mos_cached(ctx, "/api/matomo-analytics/sources", {"period": "week", "date": "today"}),
-        call_mos_cached(ctx, "/api/matomo-analytics/devices", {"period": "week", "date": "today"}),
-        call_mos_cached(ctx, "/api/matomo-analytics/geo", {"period": "week", "date": "today", "limit": 10}),
-        call_mos_cached(ctx, "/api/matomo-analytics/real-time", {}, ttl_seconds=REALTIME_CACHE_TTL),
-        call_mos_cached(ctx, "/api/matomo-analytics/entry-exit", {"period": "week", "date": "today", "limit": 8}),
+        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last30"},
+                         bypass_cache=bypass_cache),
+        call_mos_cached(ctx, "/api/matomo-analytics/trends", {}, bypass_cache=bypass_cache),
+        call_mos_cached(ctx, "/api/matomo-analytics/top-pages", {"period": "day", "date": "last30", "limit": 10},
+                         bypass_cache=bypass_cache),
+        call_mos_cached(ctx, "/api/matomo-analytics/sources", {"period": "day", "date": "last30"},
+                         bypass_cache=bypass_cache),
+        call_mos_cached(ctx, "/api/matomo-analytics/devices", {"period": "day", "date": "last30"},
+                         bypass_cache=bypass_cache),
+        call_mos_cached(ctx, "/api/matomo-analytics/geo", {"period": "day", "date": "last30", "limit": 10},
+                         bypass_cache=bypass_cache),
+        call_mos_cached(ctx, "/api/matomo-analytics/real-time", {}, ttl_seconds=REALTIME_CACHE_TTL,
+                         bypass_cache=bypass_cache),
+        call_mos_cached(ctx, "/api/matomo-analytics/entry-exit", {"period": "day", "date": "last30", "limit": 8},
+                         bypass_cache=bypass_cache),
     ]
     results = await asyncio.gather(*calls, return_exceptions=True)
     return {k: (r if not isinstance(r, Exception) else {"error": str(r)})
@@ -156,7 +172,7 @@ async def _gather(ctx) -> dict:
 @ext.panel("workspace", slot="right", title="Analytics", icon="BarChart3",
            default_width=380,
            refresh="on_event:analytics.action.result")
-async def workspace_panel(ctx):
+async def workspace_panel(ctx, refresh_now: bool = False, **_kw):
     """Dense, scrollable dashboard. Actions -> Cockpit -> Detail sections."""
     s = await load_settings(ctx)
 
@@ -168,7 +184,8 @@ async def workspace_panel(ctx):
             settings_form(s),
         ])
 
-    d, last, s = await asyncio.gather(_gather(ctx), load_result(ctx), ensure_known_domains(ctx, s))
+    d, last, s = await asyncio.gather(
+        _gather(ctx, bypass_cache=refresh_now), load_result(ctx), ensure_known_domains(ctx, s))
 
     sources = (d.get("sources") or {}).get("sources") or []
     devices = (d.get("devices") or {}).get("devices") or []
@@ -177,18 +194,18 @@ async def workspace_panel(ctx):
     ee = d.get("entry_exit") or {}
 
     detail_sections = [
-        ui.Section(title="Top pages", collapsible=True,
-                   children=[pages_table(top_pages)]),
-        ui.Section(title="Traffic sources", collapsible=False,
+        ui.Section(title="Top pages — Pageviews (last 30 days)", collapsible=True,
+                   children=[pages_table(top_pages, views_label="Pageviews")]),
+        ui.Section(title="Traffic sources — Visits (last 30 days)", collapsible=False,
                    children=[breakdown_table(sources, "Source")]),
-        ui.Section(title="Devices", collapsible=True,
+        ui.Section(title="Devices — Visits (last 30 days)", collapsible=True,
                    children=[breakdown_table(devices, "Device")]),
-        ui.Section(title="Top countries", collapsible=True,
+        ui.Section(title="Top countries — Visits (last 30 days)", collapsible=True,
                    children=[breakdown_table(countries, "Country")]),
-        ui.Section(title="Entry pages (landing)", collapsible=True,
+        ui.Section(title="Entry pages (landing, last 30 days)", collapsible=True,
                    children=[entry_exit_table(ee.get("entry_pages") or [],
                                               "visits", "Entrances")]),
-        ui.Section(title="Exit pages", collapsible=True,
+        ui.Section(title="Exit pages (last 30 days)", collapsible=True,
                    children=[entry_exit_table(ee.get("exit_pages") or [],
                                               "visits", "Exits")]),
         ui.Section(title="Settings", collapsible=True,
@@ -198,9 +215,12 @@ async def workspace_panel(ctx):
     header_children = [ui.Header(text="Analytics", level=3)]
     if len(s.get("sites") or []) > 1:
         header_children.append(ui.Badge(label=active_site_label(s), color="violet"))
+    header_children.append(
+        ui.Button(label="↻", size="sm", variant="ghost",
+                  on_click=ui.Call("__panel__workspace", refresh_now=True)))
 
     return ui.Stack(children=[
-        ui.Stack(direction="h", gap=4, align="center", children=header_children),
+        ui.Stack(direction="h", gap=4, align="center", justify="between", children=header_children),
         result_zone(last),
         ui.Divider(),
         kpi_stats(d),

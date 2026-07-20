@@ -1,4 +1,23 @@
-"""Center overlay panel — rich analytics hub with all key metrics."""
+"""Center overlay panel — rich analytics hub with all key metrics.
+
+Design notes (2026-07-20 audit fix):
+- ONE period filter drives every section (KPIs, chart, top pages, sources,
+  devices) so numbers never disagree with each other — before this, Top
+  Pages/Sources/Devices silently used "month to date" while the label said
+  "last 30d", and the KPI row mixed a rolling 30-day window with a
+  month-to-date bounce rate. Now `range` picks a single Matomo
+  (period, date) pair reused everywhere, and every section title states the
+  real window in plain words.
+- "Views" was ambiguous (Matomo's nb_hits/pageviews, not unique people).
+  Every visit-count label now says exactly what it counts: Visits,
+  Unique visitors, or Pageviews.
+- Real auto-refresh isn't available: the SDK's declared panel refresh only
+  supports "manual" and "on_event:..." — an `interval:Ns` poll was tried on
+  another extension (mail-client) and the platform silently dropped it.
+  Instead we give an honest manual "Refresh now" button that bypasses the
+  cache for one real re-fetch, plus refresh-on-event for actions taken
+  elsewhere in the extension.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -7,7 +26,6 @@ from imperal_sdk import ui
 
 from app import ext, load_settings, matomo_ready, active_site_label
 from api_client import call_mos_cached, ensure_known_domains, REALTIME_CACHE_TTL
-from panels_render import kpi_stats, chart, pages_table, breakdown_table
 from panels_settings_render import settings_form
 # NOTE: this import is load-bearing. The platform can load this center-panel
 # module on its own (to render the center overlay); importing panels_side here
@@ -19,10 +37,34 @@ from panels_side import _domain_selector
 
 REFRESH = "on_event:analytics.action.result"
 
+# One filter drives every section — (Matomo period, Matomo date, human label).
+# "today" intentionally uses period=day/date=today so the KPI row can show a
+# same-day figure; every other option is a clean, complete-day range (no
+# partial "today" contaminating averages/bounce-rate/top-pages sections).
+RANGE_OPTIONS: dict[str, tuple[str, str, str]] = {
+    "today":     ("day",   "today",     "Today"),
+    "7d":        ("day",   "last7",     "Last 7 days"),
+    "30d":       ("day",   "last30",    "Last 30 days"),
+    "month":     ("month", "today",     "This month"),
+}
+DEFAULT_RANGE = "30d"
+
+
+def _range_selector(current: str) -> ui.UINode:
+    """Select fires on_change immediately (no submit button needed) — same
+    proven pattern as other extensions' live account/folder switchers."""
+    return ui.Select(
+        options=[{"value": k, "label": v[2]} for k, v in RANGE_OPTIONS.items()],
+        value=current,
+        on_change=ui.Call("__panel__analytics_hub", view="", range="$value"),
+        param_name="range",
+    )
+
 
 @ext.panel("analytics_hub", slot="center", title="Analytics Dashboard",
            icon="icon.svg", refresh=REFRESH, center_overlay=True)
-async def hub_panel(ctx, view: str = "", **_kw):
+async def hub_panel(ctx, view: str = "", range: str = DEFAULT_RANGE,
+                     refresh_now: bool = False, **_kw):
     """Center overlay analytics dashboard — traffic, trends, top pages, sources."""
     # Close/back: show empty state
     if view == "close":
@@ -52,33 +94,44 @@ async def hub_panel(ctx, view: str = "", **_kw):
         ])
     s = await ensure_known_domains(ctx, s)
 
-    # 6 parallel calls — insights removed to keep render under Temporal 30s timeout.
-    # insights is expensive (5 sequential Matomo calls inside MOS) and not needed for
-    # the visual dashboard. Ask Webbee "what should I fix?" to get insights on demand.
-    # traffic_summary (period=month) gives bounce_rate + avg_time alongside the series.
-    traffic_summary, traffic, trends, top, sources, devices, rt = await asyncio.gather(
-        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "month", "date": "today"}),
-        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last30"}),
-        call_mos_cached(ctx, "/api/matomo-analytics/trends", {}),
-        call_mos_cached(ctx, "/api/matomo-analytics/top-pages", {"period": "month", "date": "today", "limit": 10}),
-        call_mos_cached(ctx, "/api/matomo-analytics/sources", {"period": "month", "date": "today"}),
-        call_mos_cached(ctx, "/api/matomo-analytics/devices", {"period": "month", "date": "today"}),
-        call_mos_cached(ctx, "/api/matomo-analytics/real-time", {}, ttl_seconds=REALTIME_CACHE_TTL),
+    if range not in RANGE_OPTIONS:
+        range = DEFAULT_RANGE
+    period, date, range_label = RANGE_OPTIONS[range]
+
+    # 7 parallel calls, all sharing the SAME period/date — insights excluded
+    # to keep render under Temporal's 30s timeout (insights runs 5 sequential
+    # Matomo calls inside MOS; ask Webbee "what should I fix?" for that on
+    # demand instead). A separate always-30-day call feeds the trend chart so
+    # switching the KPI range never blanks the visual history.
+    (traffic, chart_traffic, trends, top, sources, devices, rt) = await asyncio.gather(
+        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": period, "date": date},
+                         bypass_cache=refresh_now),
+        call_mos_cached(ctx, "/api/matomo-analytics/traffic", {"period": "day", "date": "last30"},
+                         bypass_cache=refresh_now),
+        call_mos_cached(ctx, "/api/matomo-analytics/trends", {}, bypass_cache=refresh_now),
+        call_mos_cached(ctx, "/api/matomo-analytics/top-pages", {"period": period, "date": date, "limit": 10},
+                         bypass_cache=refresh_now),
+        call_mos_cached(ctx, "/api/matomo-analytics/sources", {"period": period, "date": date},
+                         bypass_cache=refresh_now),
+        call_mos_cached(ctx, "/api/matomo-analytics/devices", {"period": period, "date": date},
+                         bypass_cache=refresh_now),
+        call_mos_cached(ctx, "/api/matomo-analytics/real-time", {}, ttl_seconds=REALTIME_CACHE_TTL,
+                         bypass_cache=refresh_now),
         return_exceptions=True,
     )
 
     def safe(r):
         return r if not isinstance(r, Exception) else {}
 
-    traffic_summary = safe(traffic_summary)
-    traffic   = safe(traffic)
-    trends    = safe(trends)
-    top       = safe(top)
-    sources   = safe(sources)
-    devices   = safe(devices)
-    rt        = safe(rt)
+    traffic       = safe(traffic)
+    chart_traffic = safe(chart_traffic)
+    trends        = safe(trends)
+    top           = safe(top)
+    sources       = safe(sources)
+    devices       = safe(devices)
+    rt            = safe(rt)
 
-    # ── Header: live counter + host ───────────────────────────────────────────
+    # ── Header: live counter + host + range filter + refresh ──────────────────
     live     = (rt.get("live_30m") or {}).get("visitors", 0)
     host_url = (s.get("matomo_url", "") or "").replace("https://", "").replace("http://", "")[:40]
     change   = trends.get("change_percent", 0)
@@ -92,8 +145,11 @@ async def hub_panel(ctx, view: str = "", **_kw):
             *([ui.Badge(label=site, color="violet")] if multi_site else []),
             ui.Badge(label=f"● {live} live", color="green" if live > 0 else "gray"),
         ]),
-        ui.Stack(direction="h", gap=2, children=[
+        ui.Stack(direction="h", gap=2, align="center", children=[
             ui.Badge(label=host_url, color="gray"),
+            _range_selector(range),
+            ui.Button(label="↻ Refresh", size="sm", variant="ghost",
+                      on_click=ui.Call("__panel__analytics_hub", view="", range=range, refresh_now=True)),
             ui.Button(label="⚙️", size="sm", variant="ghost",
                       on_click=ui.Call("__panel__analytics_hub", view="settings")),
             ui.Button(label="✕", size="sm", variant="ghost",
@@ -102,38 +158,41 @@ async def hub_panel(ctx, view: str = "", **_kw):
     ])
     domain_selector = _domain_selector(s)
 
-    # ── KPI stats row ─────────────────────────────────────────────────────────
-    series    = traffic.get("series") or []
-    total_v   = sum(s.get("visits", 0) for s in series)
-    total_pv  = sum(s.get("pageviews", 0) for s in series)
-    today     = series[-1].get("visits", 0) if series else 0
-    yesterday = series[-2].get("visits", 0) if len(series) >= 2 else 0
-    # Bounce rate and avg time come from the monthly summary (not time series)
-    bounce_raw = traffic_summary.get("bounce_rate", "")
+    # ── KPI stats row — everything here is for the SAME selected range ────────
+    visits    = traffic.get("visits", 0)
+    pageviews = traffic.get("pageviews", 0)
+    uniques   = traffic.get("unique_visitors")
+    bounce_raw = traffic.get("bounce_rate", "")
     bounce_str = str(bounce_raw).rstrip("%").strip()
     try:
         bounce = float(bounce_str) if bounce_str and bounce_str != "0" else 0
     except (ValueError, TypeError):
         bounce = 0
-    avg_time = traffic_summary.get("avg_time_on_site", 0) or 0
+    avg_time = traffic.get("avg_time_on_site", 0) or 0
+
+    # "Yesterday" always reads from the rolling 30-day daily series regardless
+    # of the selected range filter, so it stays a stable point of comparison.
+    daily_series = chart_traffic.get("series") or []
+    yesterday_bucket = daily_series[-2] if len(daily_series) >= 2 else {}
+    yesterday_visits = yesterday_bucket.get("visits", 0)
 
     kpis = ui.Stats(children=[
-        ui.Stat(label="Live (30m)",   value=str(live),          color="violet", icon="Users"),
-        ui.Stat(label="Today",        value=f"{today:,}",        color="blue",   icon="TrendingUp"),
-        ui.Stat(label="Yesterday",    value=f"{yesterday:,}",    color="gray"),
-        ui.Stat(label="Last 30d",     value=f"{total_v:,}",      color="blue",   icon="Eye"),
-        ui.Stat(label="Pageviews",    value=f"{total_pv:,}",     color="gray",   icon="FileText"),
-        ui.Stat(label="WoW Δ",        value=f"{change:+.1f}%",
+        ui.Stat(label="Live (30m)", value=str(live), color="violet", icon="Users"),
+        ui.Stat(label=f"Visits ({range_label})", value=f"{visits:,}", color="blue", icon="TrendingUp"),
+        *([ui.Stat(label="Unique visitors", value=f"{uniques:,}", color="teal", icon="User",
+                   trend=f"of {visits:,} visits")] if uniques is not None else []),
+        ui.Stat(label="Pageviews", value=f"{pageviews:,}", color="gray", icon="FileText"),
+        ui.Stat(label="Yesterday", value=f"{yesterday_visits:,}", color="gray"),
+        ui.Stat(label="WoW Δ", value=f"{change:+.1f}%",
                 color="green" if direction == "up" else "red" if direction == "down" else "gray",
                 icon="TrendingUp"),
-        ui.Stat(label="Bounce",       value=f"{bounce:.0f}%" if bounce else "—", color="yellow"),
-        ui.Stat(label="Avg time",     value=f"{int(avg_time//60)}m {int(avg_time%60)}s" if avg_time else "—"),
+        ui.Stat(label="Bounce", value=f"{bounce:.0f}%" if bounce else "—", color="yellow"),
+        ui.Stat(label="Avg time", value=f"{int(avg_time//60)}m {int(avg_time%60)}s" if avg_time else "—"),
     ])
 
-    # ── Traffic chart (30 days) ───────────────────────────────────────────────
-    # Exclude today (last element) — partial day causes misleading spike down.
-    # Use series[-31:-1] to get 30 complete days ending yesterday.
-    complete_series = series[-31:-1] if len(series) > 1 else series
+    # ── Traffic chart — always a stable rolling 30-day view (through
+    # yesterday, excluding the partial "today" bucket which spikes down) ──────
+    complete_series = daily_series[-31:-1] if len(daily_series) > 1 else daily_series
     chart_data = [
         {"date": s.get("date", "")[-5:], "visits": s.get("visits", 0), "pv": s.get("pageviews", 0)}
         for s in complete_series
@@ -143,7 +202,6 @@ async def hub_panel(ctx, view: str = "", **_kw):
             type="line",
             data=chart_data,
             x_key="date",
-            y2_keys=["visits", "pv"],
             colors={"visits": "#3b82f6", "pv": "#8b5cf6"},
             height=180,
         ) if chart_data else ui.Text(content="No traffic data", variant="caption"),
@@ -160,13 +218,13 @@ async def hub_panel(ctx, view: str = "", **_kw):
         }
         for p in top_pages_data[:10]
     ]
-    top_section = ui.Section(title=f"🏆 Top Pages (last 30d)", collapsible=True, children=[
+    top_section = ui.Section(title=f"🏆 Top Pages ({range_label})", collapsible=True, children=[
         ui.DataTable(
             columns=[
-                ui.DataColumn(key="page",   label="Page",     width="50%"),
-                ui.DataColumn(key="views",  label="Views",    width="17%"),
-                ui.DataColumn(key="bounce", label="Bounce",   width="16%"),
-                ui.DataColumn(key="time",   label="Avg time", width="17%"),
+                ui.DataColumn(key="page",   label="Page",       width="46%"),
+                ui.DataColumn(key="views",  label="Pageviews",  width="18%"),
+                ui.DataColumn(key="bounce", label="Bounce",     width="18%"),
+                ui.DataColumn(key="time",   label="Avg time",   width="18%"),
             ],
             rows=top_rows,
         ) if top_rows else ui.Text(content="No page data", variant="caption"),
@@ -183,12 +241,11 @@ async def hub_panel(ctx, view: str = "", **_kw):
         for s in src_data[:8]
     ]
     src_chart = [{"label": s.get("label","")[:15], "value": s.get("visits", 0)} for s in src_data[:6]]
-    sources_section = ui.Section(title="📡 Traffic Sources", collapsible=True, children=[
+    sources_section = ui.Section(title=f"📡 Traffic Sources ({range_label})", collapsible=True, children=[
         ui.Chart(
             type="bar",
             data=src_chart,
             x_key="label",
-            y2_keys=["value"],
             colors={"value": "#22c55e"},
             height=120,
         ) if src_chart else ui.Empty(message=""),
@@ -205,12 +262,11 @@ async def hub_panel(ctx, view: str = "", **_kw):
     # ── Devices ───────────────────────────────────────────────────────────────
     dev_data = devices.get("devices") or []
     dev_chart = [{"label": d.get("label","")[:12], "value": d.get("visits", 0)} for d in dev_data[:5]]
-    devices_section = ui.Section(title="📱 Devices", collapsible=True, children=[
+    devices_section = ui.Section(title=f"📱 Devices ({range_label})", collapsible=True, children=[
         ui.Chart(
             type="bar",
             data=dev_chart,
             x_key="label",
-            y2_keys=["value"],
             colors={"value": "#f97316"},
             height=100,
         ) if dev_chart else ui.Text(content="No device data", variant="caption"),
