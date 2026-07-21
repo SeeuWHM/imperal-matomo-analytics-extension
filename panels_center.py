@@ -186,9 +186,16 @@ async def hub_panel(ctx, view: str = "", range: str = DEFAULT_RANGE,
     # backend whenever that summing happened) drives an honest label + a
     # hover explanation instead of presenting the estimate as an exact count.
     uniques_is_estimate = bool(traffic.get("unique_visitors_is_estimate"))
+    # uniques can be None (traffic call failed/empty) - this Stat is now built
+    # UNCONDITIONALLY (needed so it can be wrapped in a Tooltip below), so the
+    # f-string must tolerate None itself instead of relying on the later
+    # `if uniques is not None` list-comprehension guard - that guard only
+    # decided whether to INCLUDE the stat, not whether building it was safe,
+    # and f"{None:,}" raises TypeError, which crashed the whole panel render
+    # (surfaced as an infinite-loading center panel with a zeroed-out sidebar).
     uniques_stat = ui.Stat(
         label="Unique visitors" + (" (est.)" if uniques_is_estimate else ""),
-        value=f"{uniques:,}", color="teal", icon="User",
+        value=f"{uniques:,}" if uniques is not None else "—", color="teal", icon="User",
         trend=(f"summed per day — see ⓘ" if uniques_is_estimate else f"of {visits:,} visits"),
     )
     if uniques_is_estimate:
