@@ -2,7 +2,7 @@
   "manifest_schema_version": 3,
   "sdk_version": "5.9.12",
   "app_id": "imperal-matomo-analytics-extension",
-  "version": "5.3.0",
+  "version": "5.4.0",
   "name": "Matomo Analytics Connector",
   "description": "Traffic analytics dashboard for one or more Matomo instances: visits, trends, top pages, sources, devices, geo, audience insights and AI anomaly detection — track multiple sites/projects side by side.",
   "icon": "icon.svg",
@@ -46,7 +46,7 @@
     },
     {
       "name": "traffic",
-      "description": "Website visits summary: total visits, pageviews, unique visitors, bounce rate, avg time on site, daily/weekly/monthly series. Use for: traffic overview, how many visitors, visits for a period, pageviews, traffic summary.",
+      "description": "Website visits summary: total visits, pageviews, unique visitors, bounce rate, avg time on site, daily/weekly/monthly series. Use for: traffic overview, how many visitors, visits for a period, pageviews, traffic summary. Note: for any multi-day window (period=day with date=last7/last30/etc.), unique_visitors_is_estimate=true in the result - Matomo has no true deduplicated visitor count for ranges, so that number is a sum of each day's uniques and can overcount returning visitors. Hedge accordingly when reporting it (e.g. 'roughly N unique visitors'), not as an exact figure.",
       "action_type": "read",
       "chain_callable": true,
       "effects": [],
@@ -121,6 +121,11 @@
             ],
             "default": null,
             "title": "Unique Visitors"
+          },
+          "unique_visitors_is_estimate": {
+            "default": false,
+            "title": "Unique Visitors Is Estimate",
+            "type": "boolean"
           },
           "bounce_rate": {
             "anyOf": [
