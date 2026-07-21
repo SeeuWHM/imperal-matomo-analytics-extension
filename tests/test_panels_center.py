@@ -1,15 +1,24 @@
 """Regression tests for the center dashboard panel (panels_center.hub_panel).
 
-These exist because of a real production incident (2026-07-21): a Matomo
-outage/lockout made the backend return an error payload for /traffic (empty
-of any real fields), and the panel's KPI-row code did `f"{uniques:,}"` on a
-value that was actually None - an unguarded TypeError inside the render
-function. The platform surfaced that as an infinitely-loading center panel
-(the render never completed) while the sidebar, which degrades more
-gracefully, showed honest zeros. This file locks in that the panel renders
-SOMETHING (not necessarily good data, but not a crash) no matter what shape
-of empty/error/partial data every one of the 7 parallel backend calls
-returns.
+These exist because of TWO real production incidents on 2026-07-21, both
+triggered by the same underlying cause (a Matomo outage/lockout making every
+backend call return {"error": "..."}):
+
+1. The panel's KPI-row code did f"{uniques:,}" on a value that was actually
+   None - an unguarded TypeError inside the render function. The platform
+   surfaced that as an infinitely-loading center panel (the render never
+   completed).
+2. AFTER fixing #1, the panel loaded fast but showed an all-zero dashboard
+   with no indication anything had failed - every section silently read
+   `.get(x, 0)` from an {"error": ...} payload, which is indistinguishable
+   from a genuinely empty-but-successful response once you're only looking
+   at individual fields. This is what the user reported as "loaded fast but
+   everything is 0, like it didn't finish loading". Fixed by error_banner()
+   in panels_render.py, which explicitly checks each section's payload for
+   an "error" key and renders a visible Alert naming what failed.
+
+This file locks in both: the panel never crashes AND a real failure is never
+silently presented as legitimate zero data.
 """
 from __future__ import annotations
 
@@ -35,12 +44,31 @@ def _ctx() -> MockContext:
     return ctx
 
 
+def _find_alert(node) -> bool:
+    """Walk a UINode tree (dict or ui.UINode) looking for an Alert."""
+    if node is None:
+        return False
+    d = node.to_dict() if hasattr(node, "to_dict") else node
+    if not isinstance(d, dict):
+        return False
+    if d.get("type") == "Alert":
+        return True
+    props = d.get("props") or {}
+    children = props.get("children")
+    if isinstance(children, list):
+        return any(_find_alert(c) for c in children)
+    if isinstance(children, dict):
+        return _find_alert(children)
+    return False
+
+
 @pytest.mark.asyncio
 async def test_hub_panel_survives_all_calls_erroring(monkeypatch):
     """Every one of the 7 parallel backend calls returns an error dict (the
     real shape call_mos_cached returns on failure) - traffic.get("unique_visitors")
     is None, traffic.get("visits", 0) is the default 0. The panel must still
-    render without raising."""
+    render without raising, AND must show a visible error banner instead of
+    presenting the resulting all-zero KPIs as real data."""
     async def fake_call_mos_cached(ctx, endpoint, extra=None, **kwargs):
         return {"error": "Matomo API error 500: locked out"}
 
@@ -51,12 +79,15 @@ async def test_hub_panel_survives_all_calls_erroring(monkeypatch):
 
     result = await panels_center.hub_panel(_ctx(), view="", range="30d")
     assert result is not None
+    assert _find_alert(result), "expected an error Alert banner when every backend call failed"
 
 
 @pytest.mark.asyncio
 async def test_hub_panel_survives_completely_empty_traffic(monkeypatch):
     """traffic == {} (no error key, no data keys at all) - the most literal
-    'empty response' shape. unique_visitors must fall back cleanly."""
+    'empty response' shape, e.g. a genuinely brand-new site with zero visits.
+    unique_visitors must fall back cleanly AND no error banner should appear
+    (this is real zero data, not a failure)."""
     async def fake_call_mos_cached(ctx, endpoint, extra=None, **kwargs):
         return {}
 
@@ -67,6 +98,7 @@ async def test_hub_panel_survives_completely_empty_traffic(monkeypatch):
 
     result = await panels_center.hub_panel(_ctx(), view="", range="30d")
     assert result is not None
+    assert not _find_alert(result), "a genuinely empty (not errored) payload should NOT show an error banner"
 
 
 @pytest.mark.asyncio

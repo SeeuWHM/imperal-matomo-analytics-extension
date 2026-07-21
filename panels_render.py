@@ -6,10 +6,54 @@ data dict and it returns a UINode.
 """
 from __future__ import annotations
 
+import html as _html
+import re
+
 from imperal_sdk import ui
 
 
 SEV_TYPE = {"critical": "error", "warning": "warn", "info": "info"}
+
+
+def _clean_error_detail(msg: str) -> str:
+    """Backend errors are sometimes a raw Matomo HTML error page dumped into
+    a string (e.g. a login-lockout page) - showing that verbatim is useless.
+    Pull the human message out of <h2>...</h2> if present, else fall back to
+    the first ~200 chars of whatever text we got."""
+    if not msg:
+        return "Unknown error"
+    m = re.search(r"<h2[^>]*>(.*?)</h2>", msg, re.IGNORECASE | re.DOTALL)
+    if m:
+        return _html.unescape(re.sub(r"<[^<]+?>", "", m.group(1))).strip()
+    return msg.strip().split("\n")[0][:200]
+
+
+def error_banner(sections: dict[str, dict]) -> ui.UINode | None:
+    """sections: human label -> the raw payload dict returned for that call.
+
+    call_mos()/call_mos_cached() return {"error": "..."} on ANY failure
+    (Matomo down/locked out, bad credentials, timeout, ...) - this is the
+    ONLY thing that distinguishes a real failure from a genuine all-zero
+    result, since a failed call and an empty-but-successful one can both
+    look like `{}` once individual fields are read with `.get(x, 0)`.
+    Silently treating an error payload the same as a real empty one is
+    exactly what caused the \"dashboard loaded fast but everything is 0\"
+    report - the panel was rendering a lie. This returns a visible Alert
+    naming which section(s) failed and the real Matomo/backend message, or
+    None when every section came back clean.
+    """
+    failed = {label: p.get("error") for label, p in sections.items()
+              if isinstance(p, dict) and p.get("error")}
+    if not failed:
+        return None
+    names = ", ".join(failed.keys())
+    detail = _clean_error_detail(str(next(iter(failed.values()))))
+    return ui.Alert(
+        title="Couldn't load live data from Matomo",
+        message=f"{names} failed to fetch — the numbers below are showing 0 / \"—\" "
+                f"placeholders, not real data. Reason: {detail}",
+        type="error",
+    )
 
 
 def kpi_stats(d: dict) -> ui.UINode:

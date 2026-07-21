@@ -20,7 +20,7 @@ from app import ext, load_settings, load_result, matomo_ready, active_site_label
 from api_client import call_mos_cached, ensure_known_domains, REALTIME_CACHE_TTL
 from panels_render import (
     kpi_stats, chart, insights_cards, pages_table,
-    breakdown_table, entry_exit_table, result_zone,
+    breakdown_table, entry_exit_table, result_zone, error_banner,
 )
 from panels_settings_render import settings_form
 
@@ -99,11 +99,14 @@ async def sidebar_panel(ctx):
     )
     if isinstance(s, Exception):
         s = await load_settings(ctx)
-    series = (traffic.get("series") or []) if not isinstance(traffic, Exception) else []
+    traffic_dict = traffic if isinstance(traffic, dict) else {"error": str(traffic)}
+    rt_dict = rt if isinstance(rt, dict) else {"error": str(rt)}
+    banner = error_banner({"Traffic": traffic_dict, "Live visitors": rt_dict})
+    series = (traffic_dict.get("series") or []) if "error" not in traffic_dict else []
     today = series[-1].get("visits", 0) if series else 0
     today_uniq = series[-1].get("unique_visitors") if series else None
     yesterday = series[-2].get("visits", 0) if len(series) >= 2 else 0
-    live = (rt.get("live_30m") or {}).get("visitors", 0) if not isinstance(rt, Exception) else 0
+    live = (rt_dict.get("live_30m") or {}).get("visitors", 0) if "error" not in rt_dict else 0
 
     # Domain switcher lives only on the center dashboard now (it used to appear
     # here too, duplicating the same control). The site/project switcher stays.
@@ -115,6 +118,7 @@ async def sidebar_panel(ctx):
             ui.Text(content=host, variant="caption"),
         ], direction="h"),
         *([site_selector] if site_selector else []),
+        *([banner] if banner else []),
         ui.Divider(),
         # columns=2 forces a real 2-per-row grid instead of the default
         # "auto" layout, which crammed all 4 stat cards into one squeezed
@@ -190,6 +194,12 @@ async def workspace_panel(ctx, refresh_now: bool = False, **_kw):
     d, last, s = await asyncio.gather(
         _gather(ctx, bypass_cache=refresh_now), load_result(ctx), ensure_known_domains(ctx, s))
 
+    banner = error_banner({
+        "Traffic": d.get("traffic") or {}, "Trends": d.get("trends") or {},
+        "Top pages": d.get("top") or {}, "Sources": d.get("sources") or {},
+        "Devices": d.get("devices") or {}, "Geo": d.get("geo") or {},
+        "Live visitors": d.get("real_time") or {}, "Entry/exit": d.get("entry_exit") or {},
+    })
     sources = (d.get("sources") or {}).get("sources") or []
     devices = (d.get("devices") or {}).get("devices") or []
     countries = (d.get("geo") or {}).get("countries") or []
@@ -224,6 +234,7 @@ async def workspace_panel(ctx, refresh_now: bool = False, **_kw):
 
     return ui.Stack(children=[
         ui.Stack(direction="h", gap=4, align="center", justify="between", children=header_children),
+        *([banner] if banner else []),
         result_zone(last),
         ui.Divider(),
         kpi_stats(d),

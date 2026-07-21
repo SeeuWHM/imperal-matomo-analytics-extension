@@ -26,6 +26,7 @@ from imperal_sdk import ui
 
 from app import ext, load_settings, matomo_ready, active_site_label
 from api_client import call_mos_cached, ensure_known_domains, REALTIME_CACHE_TTL
+from panels_render import error_banner
 from panels_settings_render import settings_form
 # NOTE: this import is load-bearing. The platform can load this center-panel
 # module on its own (to render the center overlay); importing panels_side here
@@ -130,6 +131,14 @@ async def hub_panel(ctx, view: str = "", range: str = DEFAULT_RANGE,
     sources       = safe(sources)
     devices       = safe(devices)
     rt            = safe(rt)
+
+    # Any section's payload can be {"error": "..."} (Matomo down/locked out,
+    # bad token, timeout) - shown BEFORE the KPI row so a failed load never
+    # looks like a genuine all-zero dashboard.
+    banner = error_banner({
+        "Traffic": traffic, "Trend chart": chart_traffic, "Trends": trends,
+        "Top pages": top, "Sources": sources, "Devices": devices, "Live visitors": rt,
+    })
 
     # ── Header: live counter + host + range filter + refresh ──────────────────
     live     = (rt.get("live_30m") or {}).get("visitors", 0)
@@ -307,6 +316,7 @@ async def hub_panel(ctx, view: str = "", range: str = DEFAULT_RANGE,
 
     return ui.Stack(children=[
         header,
+        *([banner] if banner else []),
         *([domain_selector] if domain_selector else []),
         kpis,
         ui.Divider(),
