@@ -25,7 +25,12 @@ def _err(data: dict) -> ActionResult:
     description="Website visits summary: total visits, pageviews, unique visitors, bounce rate, "
                 "avg time on site, daily/weekly/monthly series. "
                 "Use for: traffic overview, how many visitors, visits for a period, "
-                "pageviews, traffic summary.",
+                "pageviews, traffic summary. "
+                "Note: for any multi-day window (period=day with date=last7/last30/etc.), "
+                "unique_visitors_is_estimate=true in the result - Matomo has no true "
+                "deduplicated visitor count for ranges, so that number is a sum of each "
+                "day's uniques and can overcount returning visitors. Hedge accordingly "
+                "when reporting it (e.g. 'roughly N unique visitors'), not as an exact figure.",
     action_type="read",
     data_model=TrafficOverviewRecord,
 )

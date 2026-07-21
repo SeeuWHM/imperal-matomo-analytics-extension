@@ -23,6 +23,7 @@ class TrafficOverviewRecord(BaseModel):
     visits: int = 0
     pageviews: int = 0
     unique_visitors: Optional[int] = None
+    unique_visitors_is_estimate: bool = False
     bounce_rate: Optional[float | str] = None
     avg_time_on_site: Optional[float | str] = None
     period: Optional[str] = None

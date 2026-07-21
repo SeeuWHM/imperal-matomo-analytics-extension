@@ -176,11 +176,37 @@ async def hub_panel(ctx, view: str = "", range: str = DEFAULT_RANGE,
     yesterday_bucket = daily_series[-2] if len(daily_series) >= 2 else {}
     yesterday_visits = yesterday_bucket.get("visits", 0)
 
+    # Matomo itself does not compute a deduplicated unique-visitor count for
+    # any multi-day range (its own API errors "metric nb_uniq_visitors is not
+    # enabled for the requested period" - confirmed live, 2026-07-21 audit;
+    # that's why Matomo's own dashboard shows no "Unique visitors" stat once
+    # you pick more than one day). The backend's only option is to SUM each
+    # day's real unique count, which over-counts anyone who returns on a
+    # different day in the window - `unique_visitors_is_estimate` (set by the
+    # backend whenever that summing happened) drives an honest label + a
+    # hover explanation instead of presenting the estimate as an exact count.
+    uniques_is_estimate = bool(traffic.get("unique_visitors_is_estimate"))
+    uniques_stat = ui.Stat(
+        label="Unique visitors" + (" (est.)" if uniques_is_estimate else ""),
+        value=f"{uniques:,}", color="teal", icon="User",
+        trend=(f"summed per day — see ⓘ" if uniques_is_estimate else f"of {visits:,} visits"),
+    )
+    if uniques_is_estimate:
+        uniques_stat = ui.Tooltip(
+            content=(
+                "Matomo doesn't compute a real deduplicated visitor count over multi-day "
+                "ranges — its own dashboard hides \"Unique visitors\" once you pick more than "
+                "one day. This number is the SUM of each day's unique visitors instead, so "
+                "anyone who came back on a different day within this range is counted more "
+                "than once. Visits, Pageviews and Bounce above are exact, not estimates."
+            ),
+            children=uniques_stat,
+        )
+
     kpis = ui.Stats(columns=4, children=[
         ui.Stat(label="Live (30m)", value=str(live), color="violet", icon="Users"),
         ui.Stat(label=f"Visits ({range_label})", value=f"{visits:,}", color="blue", icon="TrendingUp"),
-        *([ui.Stat(label="Unique visitors", value=f"{uniques:,}", color="teal", icon="User",
-                   trend=f"of {visits:,} visits")] if uniques is not None else []),
+        *([uniques_stat] if uniques is not None else []),
         ui.Stat(label="Pageviews", value=f"{pageviews:,}", color="gray", icon="FileText"),
         ui.Stat(label="Yesterday", value=f"{yesterday_visits:,}", color="gray"),
         ui.Stat(label="WoW Δ", value=f"{change:+.1f}%",
