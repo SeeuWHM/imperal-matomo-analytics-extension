@@ -1,7 +1,7 @@
 # Matomo Analytics Connector
 
-[![Imperal SDK](https://img.shields.io/badge/imperal--sdk-5.9.9-blue)](https://pypi.org/project/imperal-sdk/)
-[![Version](https://img.shields.io/badge/version-5.2.7-green)](https://github.com/SeeuWHM/imperal-matomo-analytics-extension/releases)
+[![Imperal SDK](https://img.shields.io/badge/imperal--sdk-5.9.12-blue)](https://pypi.org/project/imperal-sdk/)
+[![Version](https://img.shields.io/badge/version-5.4.0-green)](https://github.com/SeeuWHM/imperal-matomo-analytics-extension/releases)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-orange)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Imperal%20Cloud-purple)](https://panel.imperal.io)
 
@@ -161,11 +161,12 @@ python -m pytest tests/ -v
 /home/ignat/.local/share/uv/tools/imperal-mcp/bin/imperal validate .
 ```
 
-All files kept ≤300 lines to satisfy the deploy validator.
+All files kept ≤300 lines to satisfy the deploy validator. 68 tests passing (+20 skipped —
+live-Matomo integration tests gated on real credentials).
 
 ---
 
 ## Built with
 
-- [imperal-sdk](https://github.com/imperalcloud/imperal-sdk) 5.9.9
+- [imperal-sdk](https://github.com/imperalcloud/imperal-sdk) 5.9.12
 - [Imperal Cloud](https://panel.imperal.io)

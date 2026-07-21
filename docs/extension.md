@@ -1,8 +1,8 @@
 # Matomo Analytics Connector — Full Documentation
 
-**Version:** 5.2.7 (code HEAD; SDK bumped to 5.9.9 + all tool descriptions stripped to English-only
-2026-07-18 — see bottom of file) | **app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
-**Git:** `github.com/SeeuWHM/imperal-matomo-analytics-extension` (branch `main`, latest commit `4923175`)
+**Version:** 5.4.0 (code HEAD; SDK 5.9.12; see 2026-07-21 changelog entry at bottom of file) |
+**app_id:** `imperal-matomo-analytics-extension` | **Tool name:** `analytics`
+**Git:** `github.com/SeeuWHM/imperal-matomo-analytics-extension` (branch `main`)
 **Live deploy status (as of writing):** `draft` — `reject_reason` on file is a **stale** message
 ("Does not meet quality standards") left over from an earlier, already-fixed review pass
 (`593585d6`, 14/18 checks). Resubmit for marketplace review; don't trust the reject_reason text
@@ -214,6 +214,10 @@ imperal.json                manifest — regenerate with `imperal build .` (see 
 tests/test_handlers.py      unit tests, MockContext + MockSecretStore, no network
 tests/test_matomo_analytics_api.py   backend tests: always-run SSRF validation + skip-safe live
                             integration (needs MATOMO_ANALYTICS_API_URL/MATOMO_URL/MATOMO_TOKEN)
+tests/test_panels_center.py  center-panel render tests (kpi_stats, pageviews/uniques stat wiring,
+                            error-banner-on-failure path added 2026-07-21)
+tests/test_error_banner.py  dashboard shows an explicit error banner instead of silently
+                            rendering all-zero stats when the backend traffic call fails
 tests/test_webbee_agent.py  Matomo-only agent-routing smoke tests
 ```
 
@@ -419,7 +423,7 @@ Run via the shared venv (no per-extension venv exists):
 source /home/ignat/Nextcloud/MCP-Configs/Imperal-Extensions-MCP/SeeU-Extensions/.venv-ext/bin/activate
 python -m pytest tests/ -v
 ```
-As of `4923175`: **54 passed, 20 skipped** (skips are backend live-integration tests, gated on
+As of HEAD: **68 passed, 20 skipped** (skips are backend live-integration tests, gated on
 `MATOMO_ANALYTICS_API_URL`/`MATOMO_URL`/`MATOMO_TOKEN` env vars — not failures). Covers:
 load/save settings, secrets never leaking into `ctx.store`, legacy single-site migration,
 `resolve_site`/`resolve_site_id`/`active_site_label`/`sites_with_active`, per-site segment
@@ -513,3 +517,33 @@ Edit them directly in `imperal.json` if you rename/re-describe the app.
   silently rather than crashing — but the daily "critical/warnings" morning notification is
   currently a silent no-op. Found while auditing `ctx.notify` usage across the workspace; not fixed
   here (out of scope for the SDK-bump pass) — flagged for a follow-up.
+
+---
+
+## 2026-07-21 — v5.3.0 dashboard cache + v5.4.0 pageviews accuracy fix + crash/error-banner hardening
+
+- **v5.3.0 — dashboard panel-read caching (`7c11b9e`).** The center-panel dashboard's live reads
+  (traffic/top_pages/trends/etc for the currently-selected site) are now wrapped in `ctx.cache`
+  with a short TTL, same pattern as the other writer extensions' sidebar/board caches — busted on
+  site switch / settings change, not on every panel re-render.
+- **v5.4.0 — Pageviews stat was wrong (`0969177`).** The dashboard's "Pageviews" number came from
+  `VisitsSummary`'s `nb_actions`, which counts every action type (pageviews + downloads + outlinks +
+  site searches + custom events) — not just page loads. Confirmed against live Matomo across every
+  tracked site that the extension was over-reporting. Backend (`matomo-analytics-api`) now fans out
+  `Actions.get` alongside `VisitsSummary.get` and uses its real `nb_pageviews`. Also: Matomo has no
+  true deduplicated unique-visitor count for any multi-day range (its own API errors on
+  `period=range`), so "Unique visitors" on 7d/30d views is a same-count of daily uniques and can
+  overcount returning visitors — the panel now labels it "(est.)" with a `Tooltip` explaining why,
+  and `traffic`'s chat description tells Webbee to hedge that number on multi-day windows.
+- **Crash fix (`43c4743`).** The v5.4.0 refactor moved the uniques-stat string construction outside
+  the `if uniques is not None` guard (needed to wrap it in the new `Tooltip`), so `f"{uniques:,}"`
+  ran on `None` whenever the traffic call errored or came back empty — an unhandled exception that
+  hung the center panel in an infinite-loading state. Fixed by re-guarding the format call.
+- **Silent failure fix (`704864a`).** When the backend traffic call failed, the dashboard rendered
+  all stats as zero with no indication anything was wrong — indistinguishable from a site that
+  genuinely has zero traffic. Now shows an explicit error banner (`tests/test_error_banner.py`)
+  instead of a misleadingly "healthy" all-zero dashboard.
+- **Render fix (`6a961f3`).** The Tooltip (for the uniques estimate) and an error Alert were being
+  rendered concatenated onto one unbroken line in the panel DSL — split into separate rows.
+- Test count: 54 → 68 passing (+20 skipped, unchanged — the always-skip-safe live-Matomo
+  integration tests in `test_matomo_analytics_api.py`, gated on real credentials not present in CI).
