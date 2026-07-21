@@ -75,7 +75,7 @@ def _domain_selector(s: dict) -> ui.UINode | None:
 # ─────────────────────── Left sidebar ─────────────────────
 
 @ext.panel("sidebar", slot="left", title="Analytics", icon="BarChart3",
-           default_width=240,
+           default_width=280,
            refresh="on_event:analytics.settings.saved")
 async def sidebar_panel(ctx):
     s = await load_settings(ctx)
@@ -116,7 +116,10 @@ async def sidebar_panel(ctx):
         ], direction="h"),
         *([site_selector] if site_selector else []),
         ui.Divider(),
-        ui.Stats(children=[
+        # columns=2 forces a real 2-per-row grid instead of the default
+        # "auto" layout, which crammed all 4 stat cards into one squeezed
+        # row and made every label/value overlap in a narrow 240px sidebar.
+        ui.Stats(columns=2, children=[
             ui.Stat(label="Live", value=str(live), color="violet", icon="Users"),
             ui.Stat(label="Today (visits)", value=f"{today:,}", color="blue"),
             *([ui.Stat(label="Today (unique)", value=f"{today_uniq:,}", color="teal")]

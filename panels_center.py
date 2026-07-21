@@ -176,7 +176,7 @@ async def hub_panel(ctx, view: str = "", range: str = DEFAULT_RANGE,
     yesterday_bucket = daily_series[-2] if len(daily_series) >= 2 else {}
     yesterday_visits = yesterday_bucket.get("visits", 0)
 
-    kpis = ui.Stats(children=[
+    kpis = ui.Stats(columns=4, children=[
         ui.Stat(label="Live (30m)", value=str(live), color="violet", icon="Users"),
         ui.Stat(label=f"Visits ({range_label})", value=f"{visits:,}", color="blue", icon="TrendingUp"),
         *([ui.Stat(label="Unique visitors", value=f"{uniques:,}", color="teal", icon="User",

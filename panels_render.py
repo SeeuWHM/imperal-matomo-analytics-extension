@@ -24,7 +24,9 @@ def kpi_stats(d: dict) -> ui.UINode:
     change = trends.get("change_percent", 0)
     direction = trends.get("direction", "flat")
 
-    return ui.Stats(children=[
+    # columns=2 forces a real 2-per-row grid - the default "auto" layout
+    # crammed all 5-6 cards into one squeezed row and ran labels together.
+    return ui.Stats(columns=2, children=[
         ui.Stat(label="Live (30 min)", value=str(rt.get("visitors", 0)),
                 color="violet", icon="Users"),
         ui.Stat(label="Today — Visits", value=f"{today:,}", color="blue"),

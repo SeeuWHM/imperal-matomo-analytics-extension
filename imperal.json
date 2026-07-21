@@ -3581,7 +3581,7 @@
       "icon": "BarChart3",
       "refresh": "on_event:analytics.settings.saved",
       "center_overlay": false,
-      "default_width": 240
+      "default_width": 280
     },
     {
       "panel_id": "workspace",
