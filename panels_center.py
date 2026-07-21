@@ -208,14 +208,12 @@ async def hub_panel(ctx, view: str = "", range: str = DEFAULT_RANGE,
         trend=(f"summed per day — see ⓘ" if uniques_is_estimate else f"of {visits:,} visits"),
     )
     if uniques_is_estimate:
+        # Tooltip has no width/wrap control in the SDK - it renders `content`
+        # as one unbroken line, so anything longer than a short phrase blows
+        # out the panel width and forces a horizontal scrollbar on hover
+        # (reported live, 2026-07-21). Keep this to one short sentence.
         uniques_stat = ui.Tooltip(
-            content=(
-                "Matomo doesn't compute a real deduplicated visitor count over multi-day "
-                "ranges — its own dashboard hides \"Unique visitors\" once you pick more than "
-                "one day. This number is the SUM of each day's unique visitors instead, so "
-                "anyone who came back on a different day within this range is counted more "
-                "than once. Visits, Pageviews and Bounce above are exact, not estimates."
-            ),
+            content="Estimate: summed per day, may double-count repeat visitors.",
             children=uniques_stat,
         )
 

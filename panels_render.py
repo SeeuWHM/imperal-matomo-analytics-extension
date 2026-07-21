@@ -49,9 +49,8 @@ def error_banner(sections: dict[str, dict]) -> ui.UINode | None:
     names = ", ".join(failed.keys())
     detail = _clean_error_detail(str(next(iter(failed.values()))))
     return ui.Alert(
-        title="Couldn't load live data from Matomo",
-        message=f"{names} failed to fetch — the numbers below are showing 0 / \"—\" "
-                f"placeholders, not real data. Reason: {detail}",
+        title="⚠️ Data didn't load",
+        message=f"{names}: {detail}",
         type="error",
     )
 
